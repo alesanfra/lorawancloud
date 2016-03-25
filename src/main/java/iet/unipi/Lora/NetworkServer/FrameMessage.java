@@ -87,19 +87,14 @@ public class FrameMessage {
         }
         
         if (data.length > 7+this.optLen) {
-            // C'è il payload
             this.port = bb.get(7+this.optLen);
             this.payload = Arrays.copyOfRange(data, 8+this.optLen, data.length);
         }
-
-        //System.out.println(String.format("FrameMessage size: %d, optsize: %d, port %d, payload: %d", data.length, optionsSize, this.port, this.payload.length));
     }
 
     public byte[] getEncryptedPayload(byte[] key) {
-        //System.out.println(Arrays.toString(key));
         int payloadSize =  this.payload.length;
-        int targetSize = (payloadSize % 16 == 0)? payloadSize : ((payloadSize/16) + 1) * 16;
-        //System.out.println("Size " + payloadSize + ", target: " +targetSize);
+        int targetSize = (payloadSize % 16 == 0) ? payloadSize : ((payloadSize/16) + 1) * 16;
 
         ByteBuffer bb = ByteBuffer.allocate(targetSize);
         bb.order(ByteOrder.LITTLE_ENDIAN);
