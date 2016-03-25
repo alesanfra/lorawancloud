@@ -1,6 +1,5 @@
 package iet.unipi.Lora.NetworkServer;
 
-import org.bouncycastle.crypto.CipherParameters;
 import org.bouncycastle.crypto.engines.AESEngine;
 import org.bouncycastle.crypto.macs.CMac;
 import org.bouncycastle.crypto.params.KeyParameter;
@@ -10,9 +9,11 @@ import java.nio.ByteOrder;
 import java.util.Arrays;
 import java.util.Base64;
 
+
 /**
- * Created by alessio on 16/03/16.
+ * Mac Layer Message
  */
+
 public class MACMessage {
     // LoRaWAN message types
     public static final int JOIN_REQUEST = 0;
@@ -22,6 +23,10 @@ public class MACMessage {
     public static final int CONFIRMED_DATA_UP = 4;
     public static final int CONFIRMED_DATA_DOWN = 5;
 
+    // Direction
+    private static final byte UPSTREAM = 0;
+    private static final byte DOWNSTREAM = 1;
+
     // LoRaWAN version
     public static final int LORAWAN_1 = 0;
 
@@ -30,15 +35,22 @@ public class MACMessage {
 
     // MAC Messge fields
     public int type;
-    public int lorawanVersion;
+    public int lorawanVersion = LORAWAN_1;
     public byte[] payload;
     public int MIC;
+    private byte dir;
 
-    public MACMessage(String m) {
-        byte[] data = Base64.getDecoder().decode(m.getBytes());
+
+    /**
+     * Parse physical payload
+     * @param physicalPayload
+     */
+
+    public MACMessage(String physicalPayload) {
+        byte[] data = Base64.getDecoder().decode(physicalPayload.getBytes());
 
         // Parsing Header
-        this.type = (data[0]&0xE0) >> 5;
+        this.type = (data[0] & 0xE0) >> 5;
         this.lorawanVersion = data[0] & 0x3;
 
         // Parsing Payload
@@ -51,29 +63,42 @@ public class MACMessage {
         ByteBuffer bb = ByteBuffer.wrap(Arrays.copyOfRange(data,data.length-4,data.length));
         bb.order(ByteOrder.LITTLE_ENDIAN);
         this.MIC = bb.getInt();
+
+        // Set dir
+        this.dir = (type == CONFIRMED_DATA_UP || type == UNCONFIRMED_DATA_UP || type == JOIN_REQUEST) ? UPSTREAM : DOWNSTREAM;
     }
+
+
+    /**
+     * Build a MAC message from scratch
+     * @param type
+     * @param lorawanVersion
+     * @param frameMessage
+     * @param mote
+     */
 
     public MACMessage(int type, int lorawanVersion, FrameMessage frameMessage, LoraMote mote) {
         this.type = type;
-        this.lorawanVersion = lorawanVersion;
+        this.lorawanVersion = (lorawanVersion >= 0 || lorawanVersion <= 3) ? lorawanVersion : LORAWAN_1;
+
         int optLen = (frameMessage.options != null) ? frameMessage.options.length : 0;
         int payloadLen = (frameMessage.payload != null) ? frameMessage.payload.length + 1 : 1;
 
-        // Build Encrypted payload from Frame Message
+        // Build Encrypted payload from FrameMessage Message
         ByteBuffer bb = ByteBuffer.allocate(FrameMessage.HEADER_LEN + optLen + payloadLen);
         bb.order(ByteOrder.LITTLE_ENDIAN);
 
-        // Put frame header == 7 bytes
+        // Put frameMessage header == 7 bytes
         bb.putInt(frameMessage.devAddress);
         bb.put(frameMessage.control);
         bb.putShort(frameMessage.counter);
 
-        // Put frame options
+        // Put frameMessage options
         if (optLen > 0) {
             bb.put(frameMessage.options);
         }
 
-        // Put frame port and encrypted frame payload
+        // Put frameMessage port and encrypted frameMessage payload
         if (payloadLen > 0) {
             bb.put(frameMessage.port);
             bb.put(frameMessage.getEncryptedPayload(mote.appSessionKey));
@@ -82,21 +107,30 @@ public class MACMessage {
         // Get MAC payload
         this.payload = bb.array();
 
-        int frameCounter = (type == MACMessage.CONFIRMED_DATA_UP || type == MACMessage.UNCONFIRMED_DATA_UP || type == MACMessage.JOIN_REQUEST) ? mote.frameCounterUp : mote.frameCounterDown;
+        // Set dir
+        this.dir = (type == CONFIRMED_DATA_UP || type == UNCONFIRMED_DATA_UP || type == JOIN_REQUEST) ? UPSTREAM : DOWNSTREAM;
 
         // Calculate MIC
-        this.MIC = this.calcMic(mote, frameCounter);
+        this.MIC = this.computeMIC(mote);
     }
 
-    public int calcMic(LoraMote mote, int frameCounter) {
-        byte dir = (byte) ((type == CONFIRMED_DATA_DOWN || type == UNCONFIRMED_DATA_DOWN || type == JOIN_ACCEPT)? 1 : 0);
+
+    /**
+     * Compute Message Integrity Code (MIC)
+     * @param mote
+     * @return
+     */
+
+    private int computeMIC(LoraMote mote) {
+        int frameCounter = (this.dir == UPSTREAM) ? mote.frameCounterUp : mote.frameCounterDown;
+
         ByteBuffer bb = ByteBuffer.allocate(B0_LEN + 1 + payload.length); // 16 bytes B0, 1 byte MAC header,
         bb.order(ByteOrder.LITTLE_ENDIAN);
 
         // Build B0 and put in byte buffer
         bb.put((byte) 0x49);
         bb.putInt(0x00);
-        bb.put(dir);
+        bb.put(this.dir);
         bb.putInt(mote.devAddress);
         bb.putInt(frameCounter);
         bb.put((byte) 0x00);
@@ -120,10 +154,16 @@ public class MACMessage {
         return mic.getInt();
     }
 
-    public boolean checkMIC(LoraMote mote) {
-        int frameCounter = (type == MACMessage.CONFIRMED_DATA_UP || type == MACMessage.UNCONFIRMED_DATA_UP || type == MACMessage.JOIN_REQUEST) ? mote.frameCounterUp : mote.frameCounterDown;
-        int calculatedMIC = this.calcMic(mote, frameCounter);
-        System.out.print("Received MIC: " + Integer.toHexString(this.MIC) + ", Calculated MIC: " + Integer.toHexString(calculatedMIC));
+
+    /**
+     * Checks the integrity of the message
+     * @param mote
+     * @return
+     */
+
+    public boolean checkIntegrity(LoraMote mote) {
+        int calculatedMIC = this.computeMIC(mote);
+        System.out.printf("Received MIC: %08X, Calculated MIC: %08X", this.MIC, calculatedMIC);
         boolean validMIC = (calculatedMIC == this.MIC);
 
         if (validMIC) {
@@ -135,10 +175,12 @@ public class MACMessage {
         return validMIC;
     }
 
+
     /**
      * Serialize MAC Message, using LITTLE ENDIAN byte ordering
      * @return
      */
+
     public byte[] getBytes() {
         ByteBuffer bb = ByteBuffer.allocate(1 + this.payload.length + 4);
         bb.order(ByteOrder.LITTLE_ENDIAN);

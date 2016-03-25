@@ -13,6 +13,10 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 
+/**
+ * Implements Semtech Gateway Message Protocol
+ */
+
 public class GatewayMessage {
     public static final int MAX_LENGTH = 2400;
 
@@ -34,10 +38,12 @@ public class GatewayMessage {
     public long gateway;
     public String payload;
 
+
     /**
      * Constructor which parses incoming data from socket
-     * @param message incoming data from UDP socket
+     * @param message Incoming data from UDP socket
      */
+
     public GatewayMessage(byte[] message) {
         ByteBuffer bb = ByteBuffer.wrap(message);
         bb.order(ByteOrder.BIG_ENDIAN);
@@ -56,14 +62,16 @@ public class GatewayMessage {
         }
     }
 
+
     /**
-     * Constructor
-     * @param version
-     * @param token
-     * @param type
-     * @param gateway
-     * @param payload
+     * Constructor used to build a GWMP message from scratch
+     * @param version GWMP version
+     * @param token 16-bit token
+     * @param type Type of GWMP message
+     * @param gateway 64-bit Gateway EUI
+     * @param payload JSON object containg BASE64 encoded LoRa frames and other informations
      */
+
     public GatewayMessage(byte version, short token, byte type, long gateway, String payload) {
         this.version = version;
         this.token = token;
@@ -88,6 +96,7 @@ public class GatewayMessage {
      * @param data
      * @return
      */
+
     public static String getTxpk(boolean imme, long tmst, double freq, int rfch, int powe, String modu, String datr, String codr, boolean ipol, int size, byte[] data) {
         Map txpk = new LinkedHashMap();
 
@@ -119,8 +128,9 @@ public class GatewayMessage {
 
     /**
      * Serialize GWMP packet
-     * @return
+     * @return Serialized GWMP message as a byte array
      */
+
     public byte[] getBytes() {
         ByteBuffer bb = ByteBuffer.allocate(MAX_LENGTH);
         bb.order(ByteOrder.BIG_ENDIAN);
@@ -143,12 +153,14 @@ public class GatewayMessage {
         return Arrays.copyOfRange(bb.array(),0,msgLen);
     }
 
+
     /**
      * Build UDP packet from GWMP message
      * @param address
      * @param port
      * @return
      */
+
     public DatagramPacket getDatagramPacket(InetAddress address, int port) {
         byte[] buff = this.getBytes();
         return new DatagramPacket(buff, buff.length, address, port);

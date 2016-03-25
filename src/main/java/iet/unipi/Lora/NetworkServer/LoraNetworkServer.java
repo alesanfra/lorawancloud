@@ -12,6 +12,11 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+
+/**
+ * Main class of the Lora Network Server
+ */
+
 public class LoraNetworkServer {
     private static final int BUFFER_LEN = 2400;
     private static final int UDP_PORT = 1700;
@@ -28,8 +33,12 @@ public class LoraNetworkServer {
     private List<LoraMote> motes = new ArrayList<LoraMote>();
 
 
+    /**
+     * Main Function of the NetworkServer
+     * @throws IOException
+     */
+
     private void run() throws IOException {
-        // Create socket
         DatagramSocket sock = new DatagramSocket(UDP_PORT);
         System.out.println("Listening to: " + sock.getLocalAddress().getHostAddress() + " : " + sock.getLocalPort());
 
@@ -41,9 +50,9 @@ public class LoraNetworkServer {
 
             // Receive packet
             sock.receive(packet);
-            long startTime = System.currentTimeMillis();
+            long receiveTime = System.currentTimeMillis();
             GatewayMessage gm = new GatewayMessage(packet.getData());
-            System.out.println("\nReceived message from: " + packet.getAddress().toString().substring(1) + ", Gateway: " + Long.toHexString(gm.gateway).toUpperCase());
+            System.out.println("\nReceived message from: " + packet.getAddress().getHostAddress() + ", Gateway: " + Long.toHexString(gm.gateway).toUpperCase());
 
             switch (gm.type) {
                 case GatewayMessage.PUSH_DATA: {
@@ -84,12 +93,12 @@ public class LoraNetworkServer {
                                     LoraMote mote = motes.get(index);
 
 
-                                    // Update Frame Counter Up
+                                    // Update FrameMessage Counter Up
                                     // TODO: Check duplicates!!
                                     mote.frameCounterUp = fm.counter;
 
                                     // Check MIC
-                                    mm.checkMIC(mote);
+                                    mm.checkIntegrity(mote);
 
                                     byte[] decrypted = fm.getDecryptedPayload(mote.appSessionKey);
                                     System.out.print("Payload: ");
@@ -125,12 +134,12 @@ public class LoraNetworkServer {
                                     }
                                     LoraMote mote = motes.get(index);
 
-                                    // Update Frame Counter Up
+                                    // Update FrameMessage Counter Up
                                     // TODO: Check duplicates!!
                                     mote.frameCounterUp = fm.counter;
 
                                     // Check MIC
-                                    mm.checkMIC(mote);
+                                    mm.checkIntegrity(mote);
 
                                     // Decrypt payload
                                     byte[] decrypted = fm.getDecryptedPayload(mote.appSessionKey);
@@ -218,11 +227,37 @@ public class LoraNetworkServer {
                 default:
                     System.out.println("Unknown GWMP message type received");
             }
-            double elapsedTime = ((double)(System.currentTimeMillis() - startTime)) / 1000;
+            double elapsedTime = ((double)(System.currentTimeMillis() - receiveTime)) / 1000;
             System.out.println(String.format("Elapsed time %f sec", elapsedTime));
         }
 
     }
+
+
+    /**
+     * Format EUI in a readble way
+     * @param eui EUI expressed as a number
+     * @return EUI String like AA:BB:CC:DD:EE:FF:GG:HH
+     */
+
+    private String formatEUI(long eui) {
+        String s = String.format("%016X",eui);
+        StringBuilder sb = new StringBuilder(23);
+
+        for (int i=0; i<8; i++) {
+            if (sb.length() > 0) {
+                sb.append(':');
+            }
+            sb.append(s.substring(2*i,(2*i)+2));
+        }
+        return sb.toString().toUpperCase();
+    }
+
+
+    /**
+     * Entry point
+     * @param args
+     */
 
     public static void main(String[] args) {
         try {

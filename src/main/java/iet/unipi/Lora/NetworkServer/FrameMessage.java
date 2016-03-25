@@ -13,15 +13,16 @@ import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 
 /**
- * Created by alessio on 16/03/16.
+ * Frame Layer Message
  */
+
 public class FrameMessage {
 
     public static final int HEADER_LEN = 7;
     public static final int UPSTREAM = 0;
     public static final int DOWNSTREAM = 1;
 
-    // Frame Control flags
+    // FrameMessage Control flags
     public static final byte ACK = 0x20;
 
     public int devAddress;
@@ -33,18 +34,45 @@ public class FrameMessage {
     public byte[] payload;
     public byte dir;
 
+
+    /**
+     * Build frame message from scratch
+     * @param devAddress
+     * @param control
+     * @param counter
+     * @param options
+     * @param port
+     * @param payload
+     * @param dir
+     */
+
     public FrameMessage(int devAddress, byte control, short counter, byte[] options, int port, byte[] payload, int dir) {
+
+        // Check options
+        if (options != null && options.length > 15) {
+            this.options = null;
+            System.err.println("Options array too long");
+        } else {
+            this.options = options;
+        }
+        this.optLen = (this.options != null)? this.options.length : 0;
+
+        // Initialize othe fields
         this.devAddress = devAddress;
-        this.control = control;
+        this.control = (byte) ((control & 0x0F) + this.optLen);
         this.counter = counter;
-        this.optLen = (options != null)? options.length : 0;
-        this.options = options;
         this.port = (byte) port;
         this.payload = payload;
         this.dir = (byte) dir;
     }
 
-    public FrameMessage (MACMessage macMessage) {
+
+    /**
+     * Parse raw data
+     * @param macMessage
+     */
+
+    public FrameMessage(MACMessage macMessage) {
         this.dir = (byte) ((macMessage.type == MACMessage.CONFIRMED_DATA_UP || macMessage.type == MACMessage.UNCONFIRMED_DATA_UP || macMessage.type == MACMessage.JOIN_REQUEST) ? UPSTREAM : DOWNSTREAM);
         byte[] data = macMessage.payload;
         ByteBuffer bb = ByteBuffer.wrap(data);
@@ -64,7 +92,7 @@ public class FrameMessage {
             this.payload = Arrays.copyOfRange(data, 8+this.optLen, data.length);
         }
 
-        //System.out.println(String.format("Frame size: %d, optsize: %d, port %d, payload: %d", data.length, optionsSize, this.port, this.payload.length));
+        //System.out.println(String.format("FrameMessage size: %d, optsize: %d, port %d, payload: %d", data.length, optionsSize, this.port, this.payload.length));
     }
 
     public byte[] getEncryptedPayload(byte[] key) {
@@ -123,7 +151,13 @@ public class FrameMessage {
         return null;
     }
 
-    // Convenience method (encryption == decryption)
+
+    /**
+     * Conveninece method encryption == decryption
+     * @param key
+     * @return
+     */
+
     public byte[] getDecryptedPayload(byte[] key) {
         return this.getEncryptedPayload(key);
     }
