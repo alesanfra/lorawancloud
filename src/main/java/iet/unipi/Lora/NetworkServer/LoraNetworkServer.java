@@ -67,11 +67,11 @@ public class LoraNetworkServer {
                     JSONObject jsonPayload = new JSONObject(gm.payload);
 
                     if (!jsonPayload.isNull("rxpk")) {
-                        JSONArray rxpk = jsonPayload.getJSONArray("rxpk");
-                        for (int i = 0; i < rxpk.length(); i++) {
-                            JSONObject json = rxpk.getJSONObject(i);
-                            String data = json.getString("data");
-                            System.out.println(String.format("Timestamp: %d, Size: %d, Data: %s",json.getLong("tmst"),json.getInt("size"),data));
+                        JSONArray rxpkArray = jsonPayload.getJSONArray("rxpk");
+                        for (int i = 0; i < rxpkArray.length(); i++) {
+                            JSONObject rxpk = rxpkArray.getJSONObject(i);
+                            String data = rxpk.getString("data");
+                            System.out.println(String.format("Timestamp: %d, Size: %d, Data: %s",rxpk.getLong("tmst"),rxpk.getInt("size"),data));
 
                             MACMessage mm = new MACMessage(data);
 
@@ -100,6 +100,11 @@ public class LoraNetworkServer {
                                     // Check MIC
                                     mm.checkIntegrity(mote);
 
+                                    if (fm.optLen > 0) {
+                                        System.out.println("There are options in the packet");
+                                        System.out.println(Arrays.toString(fm.options));
+                                    }
+
                                     byte[] decrypted = fm.getDecryptedPayload(mote.appSessionKey);
                                     System.out.print("Payload: ");
                                     System.out.println(Arrays.toString(decrypted));
@@ -108,12 +113,14 @@ public class LoraNetworkServer {
                                     // Provo a mandare dati su RX2
                                     if (pull_resp_addr != null) {
                                         byte[] resp_payload = "Hello".getBytes(StandardCharsets.US_ASCII);
+                                        //byte[] options = FrameMessage.getRXParamSetupReq(0,0,869525000);
+
                                         FrameMessage frame_resp = new FrameMessage(fm.devAddress, FrameMessage.ACK, (short) 0, null, 3, resp_payload, FrameMessage.DOWNSTREAM);
-                                        MACMessage mac_resp = new MACMessage(MACMessage.UNCONFIRMED_DATA_DOWN, MACMessage.LORAWAN_1, frame_resp, mote);
+                                        MACMessage mac_resp = new MACMessage(MACMessage.UNCONFIRMED_DATA_DOWN, frame_resp, mote);
                                         byte[] resp = mac_resp.getBytes();
 
-                                        long sendTime = json.getLong("tmst") + RECEIVE_DELAY2;
-                                        String resp_str = GatewayMessage.getTxpk(false, sendTime, 869.525, 1, 14, "LORA", "SF9BW125", "4/5", false, resp.length, resp);
+                                        long sendTime = rxpk.getLong("tmst") + RECEIVE_DELAY2;
+                                        String resp_str = GatewayMessage.getTxpk(false, sendTime, 869.525, 1, 14, "LORA", "SF12BW125", "4/5", false, resp.length, resp);
 
                                         GatewayMessage gw_resp = new GatewayMessage(gm.version,(short) 0, GatewayMessage.PULL_RESP, 0, resp_str);
                                         sock.send(gw_resp.getDatagramPacket(pull_resp_addr,pull_resp_port));
@@ -140,6 +147,11 @@ public class LoraNetworkServer {
 
                                     // Check MIC
                                     mm.checkIntegrity(mote);
+
+                                    if (fm.optLen > 0) {
+                                        System.out.println("There are options in the packet");
+                                        System.out.println(Arrays.toString(fm.options));
+                                    }
 
                                     // Decrypt payload
                                     byte[] decrypted = fm.getDecryptedPayload(mote.appSessionKey);

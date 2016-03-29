@@ -34,11 +34,11 @@ public class MACMessage {
     public static final int B0_LEN = 16;
 
     // MAC Messge fields
-    public int type;
-    public int lorawanVersion = LORAWAN_1;
+    public final int type;
+    public final int lorawanVersion;
     public byte[] payload;
-    public int MIC;
-    private byte dir;
+    public final int MIC;
+    private final byte dir;
 
 
     /**
@@ -55,9 +55,7 @@ public class MACMessage {
 
         // Parsing Payload
         this.payload = Arrays.copyOfRange(data, 1, data.length-4);
-
-        System.out.print("MAC Payload: ");
-        System.out.println(Arrays.toString(this.payload));
+        //System.out.println("MAC Payload: " + Arrays.toString(this.payload));
 
         // Parsing MIC
         ByteBuffer bb = ByteBuffer.wrap(Arrays.copyOfRange(data,data.length-4,data.length));
@@ -72,17 +70,16 @@ public class MACMessage {
     /**
      * Build a MAC message from scratch
      * @param type
-     * @param lorawanVersion
      * @param frameMessage
      * @param mote
      */
 
-    public MACMessage(int type, int lorawanVersion, FrameMessage frameMessage, LoraMote mote) {
-        this.type = type;
-        this.lorawanVersion = (lorawanVersion >= 0 || lorawanVersion <= 3) ? lorawanVersion : LORAWAN_1;
+    public MACMessage(int type, FrameMessage frameMessage, LoraMote mote) {
+        this.type = type & 0x7; // least significant three bits
+        this.lorawanVersion = LORAWAN_1;
 
         int optLen = (frameMessage.options != null) ? frameMessage.options.length : 0;
-        int payloadLen = (frameMessage.payload != null) ? frameMessage.payload.length + 1 : 1;
+        int payloadLen = (frameMessage.payload != null) ? frameMessage.payload.length + 1 : 0;
 
         // Build Encrypted payload from FrameMessage Message
         ByteBuffer bb = ByteBuffer.allocate(FrameMessage.HEADER_LEN + optLen + payloadLen);

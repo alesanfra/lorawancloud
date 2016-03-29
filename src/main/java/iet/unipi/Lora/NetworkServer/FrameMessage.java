@@ -23,16 +23,19 @@ public class FrameMessage {
     public static final int DOWNSTREAM = 1;
 
     // FrameMessage Control flags
+    public static final byte ADR = (byte) 0x80;
+    public static final byte ADRACKReq = 0x40;
     public static final byte ACK = 0x20;
+    public static final byte FPending = 0x10;
 
-    public int devAddress;
-    public byte control;
-    public short counter;
-    public int optLen;
-    public byte[] options;
-    public byte port;
-    public byte[] payload;
-    public byte dir;
+    public final int devAddress;
+    public final byte control;
+    public final short counter;
+    public final int optLen;
+    public final byte[] options;
+    public final byte port;
+    public final byte[] payload;
+    public final byte dir;
 
 
     /**
@@ -55,11 +58,11 @@ public class FrameMessage {
         } else {
             this.options = options;
         }
-        this.optLen = (this.options != null)? this.options.length : 0;
+        this.optLen = (this.options != null) ? this.options.length : 0;
 
         // Initialize othe fields
         this.devAddress = devAddress;
-        this.control = (byte) ((control & 0x0F) + this.optLen);
+        this.control = (byte) ((control & 0xF0) + this.optLen);
         this.counter = counter;
         this.port = (byte) port;
         this.payload = payload;
@@ -74,6 +77,7 @@ public class FrameMessage {
 
     public FrameMessage(MACMessage macMessage) {
         this.dir = (byte) ((macMessage.type == MACMessage.CONFIRMED_DATA_UP || macMessage.type == MACMessage.UNCONFIRMED_DATA_UP || macMessage.type == MACMessage.JOIN_REQUEST) ? UPSTREAM : DOWNSTREAM);
+
         byte[] data = macMessage.payload;
         ByteBuffer bb = ByteBuffer.wrap(data);
         bb.order(ByteOrder.LITTLE_ENDIAN);
@@ -84,11 +88,16 @@ public class FrameMessage {
 
         if (this.optLen > 0) {
             this.options = Arrays.copyOfRange(data, 7, 7+this.optLen);
+        } else {
+            this.options = null;
         }
         
         if (data.length > 7+this.optLen) {
             this.port = bb.get(7+this.optLen);
             this.payload = Arrays.copyOfRange(data, 8+this.optLen, data.length);
+        } else {
+            this.port = 0;
+            this.payload = null;
         }
     }
 
@@ -148,7 +157,7 @@ public class FrameMessage {
 
 
     /**
-     * Conveninece method encryption == decryption
+     * Conveninece method (encryption == decryption)
      * @param key
      * @return
      */
@@ -157,8 +166,31 @@ public class FrameMessage {
         return this.getEncryptedPayload(key);
     }
 
+    /**
+     * Returns ACK bit
+     * @return ACK bit
+     */
+
     public int getAck() {
         return (this.control & 0x20) >> 5;
+    }
+
+    /**
+     * Build RXParamSetupReq MAC Command: set RX1 data rate offset, set RX2 data rate, set RX2 Frequency
+     * @param RX1DRoffset Offset between uplink  and downlink data rate
+     * @param RX2DataRate RX2 data rate
+     * @param frequency RX2 center frequency expressed in hz
+     * @return byte array to be put in frame option field
+     */
+
+    public static byte[] getRXParamSetupReq(int RX1DRoffset, int RX2DataRate, int frequency) {
+        byte DLsettings = (byte) (((RX1DRoffset & 0x7) << 4) + (RX2DataRate & 0xF));
+        ByteBuffer bb = ByteBuffer.allocate(5).order(ByteOrder.LITTLE_ENDIAN);
+        bb.put(DLsettings);
+        bb.putInt(frequency/100);
+        byte[] req = bb.array();
+        System.out.println("RXParamSetupReq: " + Arrays.toString(req));
+        return Arrays.copyOfRange(req,0,4);
     }
 
 }
