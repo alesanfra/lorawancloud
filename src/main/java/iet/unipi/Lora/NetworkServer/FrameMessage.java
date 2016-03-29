@@ -175,6 +175,7 @@ public class FrameMessage {
         return (this.control & 0x20) >> 5;
     }
 
+
     /**
      * Build RXParamSetupReq MAC Command: set RX1 data rate offset, set RX2 data rate, set RX2 Frequency
      * @param RX1DRoffset Offset between uplink  and downlink data rate

@@ -9,12 +9,12 @@ import java.util.concurrent.ConcurrentLinkedQueue;
  */
 
 public class LoraMote {
-    public long devEUI;
-    public long appEUI;
-    public int devAddress;
-    public byte[] appKey;
-    public byte[] netSessionKey;
-    public byte[] appSessionKey;
+    public final long devEUI;
+    public final long appEUI;
+    public final int devAddress;
+    public final byte[] appKey;
+    public final byte[] netSessionKey;
+    public final byte[] appSessionKey;
     public int frameCounterUp;
     public int frameCounterDown;
 
@@ -38,6 +38,8 @@ public class LoraMote {
         this.appKey = appKey;
         this.netSessionKey = netSessionKey;
         this.appSessionKey = appSessionKey;
+        this.frameCounterUp = 0;
+        this.frameCounterDown = 0;
     }
 
 
@@ -62,7 +64,7 @@ public class LoraMote {
      */
 
     public LoraMote(int devAddress) {
-        this.devAddress = devAddress;
+        this(0,0,devAddress,null,null,null);
     }
 
 

@@ -105,10 +105,25 @@ public class MACMessage {
         this.payload = bb.array();
 
         // Set dir
-        this.dir = (type == CONFIRMED_DATA_UP || type == UNCONFIRMED_DATA_UP || type == JOIN_REQUEST) ? UPSTREAM : DOWNSTREAM;
+        byte direction = -1;
+
+        if (type == CONFIRMED_DATA_UP || type == UNCONFIRMED_DATA_UP || type == JOIN_REQUEST) {
+            direction = UPSTREAM;
+        } else if (type == CONFIRMED_DATA_DOWN || type == UNCONFIRMED_DATA_DOWN || type == JOIN_ACCEPT) {
+            direction = DOWNSTREAM;
+        }
+
+        if (direction == -1) {
+            System.err.println("MAC messsage type not recognized, dir set to 1 (DOWNSTREAM)");
+            this.dir = DOWNSTREAM;
+        } else {
+            this.dir = direction;
+        }
 
         // Calculate MIC
         this.MIC = this.computeMIC(mote);
+
+        //System.out.println("MAC Payload: " + Arrays.toString(this.payload));
     }
 
 
@@ -146,8 +161,7 @@ public class MACMessage {
         mac.doFinal(cmac, 0);
 
         // Get first 4 bytes as integer
-        ByteBuffer mic = ByteBuffer.wrap(cmac);
-        mic.order(ByteOrder.LITTLE_ENDIAN);
+        ByteBuffer mic = ByteBuffer.wrap(cmac).order(ByteOrder.LITTLE_ENDIAN);
         return mic.getInt();
     }
 
@@ -185,6 +199,8 @@ public class MACMessage {
         bb.put(mac_header);
         bb.put(this.payload);
         bb.putInt(this.MIC);
-        return bb.array();
+        byte[] res = bb.array();
+        System.out.println("PHY Payload: " + Arrays.toString(res));
+        return res;
     }
 }

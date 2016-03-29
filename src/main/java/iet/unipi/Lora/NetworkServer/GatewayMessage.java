@@ -98,7 +98,7 @@ public class GatewayMessage {
      */
 
     public static String getTxpk(boolean imme, long tmst, double freq, int rfch, int powe, String modu, String datr, String codr, boolean ipol, int size, byte[] data) {
-        Map txpk = new LinkedHashMap();
+        JSONObject txpk = new JSONObject();
 
         if (imme) {
             txpk.put("imme",imme);
@@ -117,12 +117,11 @@ public class GatewayMessage {
         String b64Data = new String(Base64.getEncoder().encode(data),StandardCharsets.US_ASCII);
         txpk.put("data",b64Data);
 
-        Map payload = new LinkedHashMap();
+        JSONObject payload = new JSONObject();
         payload.put("txpk",txpk);
 
-        JSONObject jsonPayload = new JSONObject(payload);
-        System.out.println(jsonPayload.toString());
-        return jsonPayload.toString().trim();
+        System.out.println(payload.toString());
+        return payload.toString().trim();
     }
 
 
