@@ -92,12 +92,11 @@ public class GatewayMessage {
      * @param datr
      * @param codr
      * @param ipol
-     * @param size
      * @param data
      * @return
      */
 
-    public static String getTxpk(boolean imme, long tmst, double freq, int rfch, int powe, String modu, String datr, String codr, boolean ipol, int size, byte[] data) {
+    public static String getTxpk(boolean imme, long tmst, double freq, int rfch, int powe, String modu, String datr, String codr, boolean ipol, byte[] data) {
         JSONObject txpk = new JSONObject();
 
         if (imme) {
@@ -113,7 +112,7 @@ public class GatewayMessage {
         txpk.put("datr",datr);
         txpk.put("codr",codr);
         txpk.put("ipol",ipol);
-        txpk.put("size",size);
+        txpk.put("size",data.length);
         String b64Data = new String(Base64.getEncoder().encode(data),StandardCharsets.US_ASCII);
         txpk.put("data",b64Data);
 

@@ -4,8 +4,16 @@ import org.bouncycastle.crypto.engines.AESEngine;
 import org.bouncycastle.crypto.macs.CMac;
 import org.bouncycastle.crypto.params.KeyParameter;
 
+import javax.crypto.BadPaddingException;
+import javax.crypto.Cipher;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.NoSuchPaddingException;
+import javax.crypto.spec.SecretKeySpec;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.security.InvalidKeyException;
+import java.security.Key;
+import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 import java.util.Base64;
 
@@ -36,9 +44,9 @@ public class MACMessage {
     // MAC Messge fields
     public final int type;
     public final int lorawanVersion;
-    public byte[] payload;
+    public final byte[] payload;
     public final int MIC;
-    private final byte dir;
+    public final byte dir;
 
 
     /**
@@ -48,6 +56,7 @@ public class MACMessage {
 
     public MACMessage(String physicalPayload) {
         byte[] data = Base64.getDecoder().decode(physicalPayload.getBytes());
+        System.out.println("PHY Payload: " + Arrays.toString(data));
 
         // Parsing Header
         this.type = (data[0] & 0xE0) >> 5;
@@ -63,7 +72,20 @@ public class MACMessage {
         this.MIC = bb.getInt();
 
         // Set dir
-        this.dir = (type == CONFIRMED_DATA_UP || type == UNCONFIRMED_DATA_UP || type == JOIN_REQUEST) ? UPSTREAM : DOWNSTREAM;
+        byte direction = -1;
+
+        if (this.type == CONFIRMED_DATA_UP || this.type == UNCONFIRMED_DATA_UP || this.type == JOIN_REQUEST) {
+            direction = UPSTREAM;
+        } else if (this.type == CONFIRMED_DATA_DOWN || this.type == UNCONFIRMED_DATA_DOWN || this.type == JOIN_ACCEPT) {
+            direction = DOWNSTREAM;
+        }
+
+        if (direction == -1) {
+            System.err.println("MAC messsage type not recognized, dir set to 1 (DOWNSTREAM)");
+            this.dir = DOWNSTREAM;
+        } else {
+            this.dir = direction;
+        }
     }
 
 
@@ -107,9 +129,9 @@ public class MACMessage {
         // Set dir
         byte direction = -1;
 
-        if (type == CONFIRMED_DATA_UP || type == UNCONFIRMED_DATA_UP || type == JOIN_REQUEST) {
+        if (this.type == CONFIRMED_DATA_UP || this.type == UNCONFIRMED_DATA_UP || this.type == JOIN_REQUEST) {
             direction = UPSTREAM;
-        } else if (type == CONFIRMED_DATA_DOWN || type == UNCONFIRMED_DATA_DOWN || type == JOIN_ACCEPT) {
+        } else if (this.type == CONFIRMED_DATA_DOWN || this.type == UNCONFIRMED_DATA_DOWN || this.type == JOIN_ACCEPT) {
             direction = DOWNSTREAM;
         }
 
@@ -123,8 +145,26 @@ public class MACMessage {
         // Calculate MIC
         this.MIC = this.computeMIC(mote);
 
-        //System.out.println("MAC Payload: " + Arrays.toString(this.payload));
+        System.out.println("MAC Payload: " + Arrays.toString(this.payload));
     }
+
+
+    /*
+    public MACMessage(JoinAccept joinAccept, LoraMote mote) {
+        this.type = JOIN_ACCEPT;
+        this.lorawanVersion = LORAWAN_1;
+        this.dir = DOWNSTREAM;
+
+        ByteBuffer bb = ByteBuffer.allocate(JoinAccept.JOIN_ACCEPT_LENGTH).order(ByteOrder.LITTLE_ENDIAN);
+        bb.put(joinAccept.appNonce);
+        bb.put(joinAccept.netID);
+        bb.putInt(joinAccept.devAddress);
+        bb.put(joinAccept.DLsettings);
+        bb.put(joinAccept.RxDelay);
+        this.payload = bb.array();
+
+        this.MIC = computeJoinAcceptMIC(mote.appKey);
+    }*/
 
 
     /**
@@ -136,8 +176,7 @@ public class MACMessage {
     private int computeMIC(LoraMote mote) {
         int frameCounter = (this.dir == UPSTREAM) ? mote.frameCounterUp : mote.frameCounterDown;
 
-        ByteBuffer bb = ByteBuffer.allocate(B0_LEN + 1 + payload.length); // 16 bytes B0, 1 byte MAC header,
-        bb.order(ByteOrder.LITTLE_ENDIAN);
+        ByteBuffer bb = ByteBuffer.allocate(B0_LEN + 1 + this.payload.length).order(ByteOrder.LITTLE_ENDIAN);
 
         // Build B0 and put in byte buffer
         bb.put((byte) 0x49);
@@ -146,24 +185,48 @@ public class MACMessage {
         bb.putInt(mote.devAddress);
         bb.putInt(frameCounter);
         bb.put((byte) 0x00);
-        bb.put((byte) (this.payload.length + 1));
+        bb.put((byte) ((this.payload.length + 1) & 0xFF));
 
         // Build MSG and put in byte buffer
         byte mac_header = (byte) (((this.type << 5) + this.lorawanVersion) & 0xFF);
         bb.put(mac_header);
         bb.put(this.payload);
+        byte[] stream = bb.array();
+        System.out.println("Stream input: " + Arrays.toString(stream));
+
 
         // Calculate CMAC
         byte[] cmac = new byte[16];
         CMac mac = new CMac(new AESEngine());
         mac.init(new KeyParameter(mote.netSessionKey));
-        mac.update(bb.array(), 0, bb.array().length);
+        mac.update(stream, 0, stream.length);
         mac.doFinal(cmac, 0);
 
         // Get first 4 bytes as integer
         ByteBuffer mic = ByteBuffer.wrap(cmac).order(ByteOrder.LITTLE_ENDIAN);
         return mic.getInt();
     }
+
+
+    /*
+    private int computeJoinAcceptMIC(byte[] appKey) {
+        ByteBuffer bb = ByteBuffer.allocate(1 + payload.length).order(ByteOrder.LITTLE_ENDIAN);
+        byte mac_header = (byte) (((this.type << 5) + this.lorawanVersion) & 0xFF);
+        bb.put(mac_header);
+        bb.put(this.payload);
+        byte[] stream = bb.array();
+
+        // Calculate CMAC
+        byte[] cmac = new byte[16];
+        CMac mac = new CMac(new AESEngine());
+        mac.init(new KeyParameter(appKey));
+        mac.update(stream, 0, stream.length);
+        mac.doFinal(cmac, 0);
+
+        // Get first 4 bytes as integer
+        ByteBuffer mic = ByteBuffer.wrap(cmac).order(ByteOrder.LITTLE_ENDIAN);
+        return mic.getInt();
+    }*/
 
 
     /**
@@ -203,4 +266,41 @@ public class MACMessage {
         System.out.println("PHY Payload: " + Arrays.toString(res));
         return res;
     }
+
+    /*
+    public byte[] getEncryptedJoinAccept(byte[] key) {
+        ByteBuffer bb = ByteBuffer.allocate(this.payload.length + 4).order(ByteOrder.LITTLE_ENDIAN);
+        bb.put(this.payload);
+        bb.putInt(this.MIC);
+
+        byte[] encrypted = new byte[0];
+        try {
+            // Create key and cipher
+            Key aesKey = new SecretKeySpec(key, "AES");
+            Cipher cipher = Cipher.getInstance("AES/ECB/NoPadding");
+
+            // Create S
+            cipher.init(Cipher.DECRYPT_MODE, aesKey);
+            encrypted = cipher.doFinal(bb.array());
+        } catch (NoSuchAlgorithmException e) {
+            e.printStackTrace();
+        } catch (NoSuchPaddingException e) {
+            e.printStackTrace();
+        } catch (BadPaddingException e) {
+            e.printStackTrace();
+        } catch (IllegalBlockSizeException e) {
+            e.printStackTrace();
+        } catch (InvalidKeyException e) {
+            e.printStackTrace();
+        }
+
+        bb = ByteBuffer.allocate(1 + encrypted.length);
+
+        byte mac_header = (byte) ((this.type << 5) + this.lorawanVersion);
+        bb.put(mac_header);
+        bb.put(encrypted);
+        byte[] res = bb.array();
+        //System.out.println("PHY Payload: " + Arrays.toString(res));
+        return res;
+    }*/
 }

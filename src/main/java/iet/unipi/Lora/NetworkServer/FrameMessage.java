@@ -60,13 +60,15 @@ public class FrameMessage {
         }
         this.optLen = (this.options != null) ? this.options.length : 0;
 
-        // Initialize othe fields
+        // Initialize other fields
         this.devAddress = devAddress;
         this.control = (byte) ((control & 0xF0) + this.optLen);
         this.counter = counter;
-        this.port = (byte) port;
+        this.port = (byte) (port & 0xFF);
         this.payload = payload;
-        this.dir = (byte) dir;
+        this.dir = (byte) (dir & 0x1);
+
+        //System.out.println("Frame Payload: " + Arrays.toString(this.payload));
     }
 
 
@@ -76,13 +78,13 @@ public class FrameMessage {
      */
 
     public FrameMessage(MACMessage macMessage) {
-        this.dir = (byte) ((macMessage.type == MACMessage.CONFIRMED_DATA_UP || macMessage.type == MACMessage.UNCONFIRMED_DATA_UP || macMessage.type == MACMessage.JOIN_REQUEST) ? UPSTREAM : DOWNSTREAM);
+        this.dir = macMessage.dir;
 
         byte[] data = macMessage.payload;
-        ByteBuffer bb = ByteBuffer.wrap(data);
-        bb.order(ByteOrder.LITTLE_ENDIAN);
+        ByteBuffer bb = ByteBuffer.wrap(data).order(ByteOrder.LITTLE_ENDIAN);
         this.devAddress = bb.getInt(0);
         this.control = bb.get(4);
+        System.out.println("Control: " + String.format("%16s", Integer.toBinaryString(this.control)).replace(' ', '0'));
         this.counter = bb.getShort(5);
         this.optLen = control & 0xF;
 
@@ -102,6 +104,11 @@ public class FrameMessage {
     }
 
     public byte[] getEncryptedPayload(byte[] key) {
+        if (this.payload == null || this.payload.length == 0) {
+            return new byte[0];
+        }
+
+
         int payloadSize =  this.payload.length;
         int targetSize = (payloadSize % 16 == 0) ? payloadSize : ((payloadSize/16) + 1) * 16;
 

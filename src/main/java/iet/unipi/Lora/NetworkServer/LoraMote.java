@@ -1,5 +1,15 @@
 package iet.unipi.Lora.NetworkServer;
 
+import javax.crypto.BadPaddingException;
+import javax.crypto.Cipher;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.NoSuchPaddingException;
+import javax.crypto.spec.SecretKeySpec;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.security.InvalidKeyException;
+import java.security.Key;
+import java.security.NoSuchAlgorithmException;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
@@ -9,6 +19,11 @@ import java.util.concurrent.ConcurrentLinkedQueue;
  */
 
 public class LoraMote {
+    public static final byte NET_SESSION_KEY = 0x01;
+    public static final byte APP_SESSION_KEY = 0x02;
+
+
+
     public final long devEUI;
     public final long appEUI;
     public final int devAddress;
@@ -75,7 +90,7 @@ public class LoraMote {
      * @return
      */
 
-    private static byte[] parseHexKey(String key) {
+    public static byte[] parseHexKey(String key) {
         int len = key.length() / 2;
         byte[] data = new byte[len];
         for (int i = 0; i < len; i++) {
@@ -83,6 +98,45 @@ public class LoraMote {
         }
         return data;
     }
+
+    /*
+    public static byte[] getSessionKey(byte[] appKey, byte flag, byte[] appNonce, byte[] netID, short devNonce) {
+
+        ByteBuffer bb = ByteBuffer.allocate().order(ByteOrder.LITTLE_ENDIAN);
+
+        bb.put(flag);
+        bb.put(appNonce);
+        bb.put(netID);
+        bb.putShort(devNonce);
+
+        try {
+            // Create key and cipher
+            Key aesKey = new SecretKeySpec(appKey, "AES");
+            Cipher cipher = Cipher.getInstance("AES/ECB");
+
+            // Create S
+            cipher.init(Cipher.ENCRYPT_MODE, aesKey);
+            byte[] S = cipher.doFinal(A);
+
+            byte[] decrypted = new byte[payloadSize];
+
+            for (int i=0; i<payloadSize; i++) {
+                decrypted[i] = (byte) (this.payload[i] ^ S[i]);
+            }
+
+            return decrypted;
+        } catch (NoSuchAlgorithmException e) {
+            e.printStackTrace();
+        } catch (NoSuchPaddingException e) {
+            e.printStackTrace();
+        } catch (BadPaddingException e) {
+            e.printStackTrace();
+        } catch (IllegalBlockSizeException e) {
+            e.printStackTrace();
+        } catch (InvalidKeyException e) {
+            e.printStackTrace();
+        }
+    }*/
 
 
     @Override
