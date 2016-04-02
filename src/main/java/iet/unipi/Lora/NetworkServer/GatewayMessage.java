@@ -113,7 +113,8 @@ public class GatewayMessage {
         txpk.put("codr",codr);
         txpk.put("ipol",ipol);
         txpk.put("size",data.length);
-        String b64Data = new String(Base64.getEncoder().encode(data),StandardCharsets.US_ASCII);
+        String b64Data = Base64.getEncoder().encodeToString(data);
+        System.out.println("Base 64 data: " + b64Data + " , lunghezza " + b64Data.length());
         txpk.put("data",b64Data);
 
         JSONObject payload = new JSONObject();

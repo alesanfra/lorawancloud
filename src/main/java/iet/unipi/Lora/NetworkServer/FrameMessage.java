@@ -140,6 +140,8 @@ public class FrameMessage {
             cipher.init(Cipher.ENCRYPT_MODE, aesKey);
             byte[] S = cipher.doFinal(A);
 
+            System.out.println("S: " +  Arrays.toString(S));
+
             byte[] decrypted = new byte[payloadSize];
 
             for (int i=0; i<payloadSize; i++) {

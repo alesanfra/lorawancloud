@@ -45,7 +45,7 @@ public class MACMessage {
     public final int type;
     public final int lorawanVersion;
     public final byte[] payload;
-    public final int MIC;
+    public final byte[] MIC;
     public final byte dir;
 
 
@@ -66,10 +66,8 @@ public class MACMessage {
         this.payload = Arrays.copyOfRange(data, 1, data.length-4);
         //System.out.println("MAC Payload: " + Arrays.toString(this.payload));
 
-        // Parsing MIC
-        ByteBuffer bb = ByteBuffer.wrap(Arrays.copyOfRange(data,data.length-4,data.length));
-        bb.order(ByteOrder.LITTLE_ENDIAN);
-        this.MIC = bb.getInt();
+
+        this.MIC = Arrays.copyOfRange(data,data.length-4,data.length);
 
         // Set dir
         byte direction = -1;
@@ -173,7 +171,7 @@ public class MACMessage {
      * @return
      */
 
-    private int computeMIC(LoraMote mote) {
+    private byte[] computeMIC(LoraMote mote) {
         int frameCounter = (this.dir == UPSTREAM) ? mote.frameCounterUp : mote.frameCounterDown;
 
         ByteBuffer bb = ByteBuffer.allocate(B0_LEN + 1 + this.payload.length).order(ByteOrder.LITTLE_ENDIAN);
@@ -194,7 +192,6 @@ public class MACMessage {
         byte[] stream = bb.array();
         System.out.println("Stream input: " + Arrays.toString(stream));
 
-
         // Calculate CMAC
         byte[] cmac = new byte[16];
         CMac mac = new CMac(new AESEngine());
@@ -202,9 +199,7 @@ public class MACMessage {
         mac.update(stream, 0, stream.length);
         mac.doFinal(cmac, 0);
 
-        // Get first 4 bytes as integer
-        ByteBuffer mic = ByteBuffer.wrap(cmac).order(ByteOrder.LITTLE_ENDIAN);
-        return mic.getInt();
+        return Arrays.copyOfRange(cmac,0,4);
     }
 
 
@@ -236,9 +231,9 @@ public class MACMessage {
      */
 
     public boolean checkIntegrity(LoraMote mote) {
-        int calculatedMIC = this.computeMIC(mote);
-        System.out.printf("Received MIC: %08X, Calculated MIC: %08X", this.MIC, calculatedMIC);
-        boolean validMIC = (calculatedMIC == this.MIC);
+        byte[] calculatedMIC = this.computeMIC(mote);
+        System.out.printf("Received MIC: %s, Calculated MIC: %s", Arrays.toString(this.MIC), Arrays.toString(calculatedMIC));
+        boolean validMIC = Arrays.equals(this.MIC,calculatedMIC);
 
         if (validMIC) {
             System.out.println(" ==> VALID MIC");
@@ -261,7 +256,7 @@ public class MACMessage {
         byte mac_header = (byte) ((this.type << 5) + this.lorawanVersion);
         bb.put(mac_header);
         bb.put(this.payload);
-        bb.putInt(this.MIC);
+        bb.put(this.MIC);
         byte[] res = bb.array();
         System.out.println("PHY Payload: " + Arrays.toString(res));
         return res;

@@ -1,5 +1,6 @@
 package iet.unipi.Lora.NetworkServer;
 
+import jdk.internal.cmm.SystemResourcePressureImpl;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -54,7 +55,19 @@ public class LoraNetworkServer {
         System.out.println("Listening to: " + sock.getLocalAddress().getHostAddress() + " : " + sock.getLocalPort());
 
         // Add one mote (ABP join)
-        motes.add(new LoraMote("F102030405060708", "0", "F5060708", "", "F1020304050607080910111213141516", "F00102030405060708090A0B0C0D0E0F"));
+        motes.add(new LoraMote("0102030405060708", "0", "05060708", "", "01020304050607080910111213141516", "000102030405060708090A0B0C0D0E0F"));
+        LoraMote otaa = new LoraMote("01C2030405060708", "0", "0091F30E", "", "806AD892D14E93C4EA2EA50F47BEFC21", "548567462AED641486E424B6A28F0EB8");
+
+        FrameMessage frameresp = new FrameMessage(otaa.devAddress, FrameMessage.ACK, (short) 0x0128, null, 3, null, FrameMessage.DOWNSTREAM);
+        MACMessage macresp = new MACMessage(MACMessage.UNCONFIRMED_DATA_DOWN, frameresp, otaa);
+
+        byte[] tutto = macresp.getBytes();
+
+        for(byte b: tutto) {
+            System.out.print(Integer.toHexString(b & 0xFF) + " ");
+        }
+
+        System.exit(0);
 
         while (true) {
             DatagramPacket packet = new DatagramPacket(new byte[BUFFER_LEN], BUFFER_LEN);
@@ -120,7 +133,7 @@ public class LoraNetworkServer {
                                     System.out.println("Received payload: " + Arrays.toString(decrypted));
 
                                     if (pull_resp_addr != null) {
-                                        byte[] r = {0x00};
+                                        //byte[] r = "Hello world".getBytes(StandardCharsets.US_ASCII);
                                         FrameMessage frame_resp = new FrameMessage(fm.devAddress, FrameMessage.ACK, (short) mote.frameCounterDown, null, FRAME_PORT, null, FrameMessage.DOWNSTREAM);
                                         MACMessage mac_resp = new MACMessage(MACMessage.UNCONFIRMED_DATA_DOWN, frame_resp, mote);
                                         //String resp_str = GatewayMessage.getTxpk(false, tmst + RECEIVE_DELAY1 , rxpk.getDouble("freq"), RFCH, POWER, rxpk.getString("modu"), rxpk.getString("datr"), rxpk.getString("codr"), false, mac_resp.getBytes());
