@@ -1,6 +1,6 @@
 package iet.unipi.Lora.NetworkServer;
 
-import jdk.internal.cmm.SystemResourcePressureImpl;
+import org.bouncycastle.util.encoders.Hex;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -8,7 +8,6 @@ import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -27,7 +26,6 @@ public class LoraNetworkServer {
     // Temporizing
     public static final long RECEIVE_DELAY1 = 1000000; // microsec
     public static final long RECEIVE_DELAY2 = RECEIVE_DELAY1 + 1000000; // microsec
-
     public static final long JOIN_ACCEPT_DELAY1 = 5000000;
     public static final long JOIN_ACCEPT_DELAY2 = JOIN_ACCEPT_DELAY1 + 1000000;
 
@@ -43,7 +41,8 @@ public class LoraNetworkServer {
 
     private static final byte FRAME_PORT = 3;
 
-    public static final byte[] netID = {0x1,0x2,0x0};
+    public static final byte[] netID = Hex.decode("020100");
+
 
     /**
      * Main Function of the NetworkServer
@@ -55,19 +54,9 @@ public class LoraNetworkServer {
         System.out.println("Listening to: " + sock.getLocalAddress().getHostAddress() + " : " + sock.getLocalPort());
 
         // Add one mote (ABP join)
-        motes.add(new LoraMote("0102030405060708", "0", "05060708", "", "01020304050607080910111213141516", "000102030405060708090A0B0C0D0E0F"));
-        LoraMote otaa = new LoraMote("01C2030405060708", "0", "0091F30E", "", "806AD892D14E93C4EA2EA50F47BEFC21", "548567462AED641486E424B6A28F0EB8");
+        motes.add(new LoraMote("0102030405060708", "00", "05060708", "00", "01020304050607080910111213141516", "000102030405060708090A0B0C0D0E0F"));
 
-        FrameMessage frameresp = new FrameMessage(otaa.devAddress, FrameMessage.ACK, (short) 0x0128, null, 3, null, FrameMessage.DOWNSTREAM);
-        MACMessage macresp = new MACMessage(MACMessage.UNCONFIRMED_DATA_DOWN, frameresp, otaa);
-
-        byte[] tutto = macresp.getBytes();
-
-        for(byte b: tutto) {
-            System.out.print(Integer.toHexString(b & 0xFF) + " ");
-        }
-
-        System.exit(0);
+        //debugMIC();
 
         while (true) {
             DatagramPacket packet = new DatagramPacket(new byte[BUFFER_LEN], BUFFER_LEN);
@@ -277,24 +266,24 @@ public class LoraNetworkServer {
     }
 
 
-    /**
-     * Format EUI in a readble way
-     * @param eui EUI expressed as a number
-     * @return EUI String like AA:BB:CC:DD:EE:FF:GG:HH
-     */
+    private void debugMIC() {
+        LoraMote otaa = new LoraMote("01C2030405060708", "00", "0091F30E", "00", "806AD892D14E93C4EA2EA50F47BEFC21", "548567462AED641486E424B6A28F0EB8");
+        otaa.frameCounterDown = 0x0128;
 
-    private String formatEUI(long eui) {
-        String s = String.format("%016X",eui);
-        StringBuilder sb = new StringBuilder(23);
+        FrameMessage frameresp = new FrameMessage(otaa.devAddress, FrameMessage.ACK, (short) 0x0128, null, 3, null, FrameMessage.DOWNSTREAM);
+        MACMessage macresp = new MACMessage(MACMessage.UNCONFIRMED_DATA_DOWN, frameresp, otaa);
 
-        for (int i=0; i<8; i++) {
-            if (sb.length() > 0) {
-                sb.append(':');
-            }
-            sb.append(s.substring(2*i,(2*i)+2));
+        byte[] tutto = macresp.getBytes();
+
+        for (byte b: tutto) {
+            System.out.print(Integer.toHexString(b & 0xFF) + " ");
         }
-        return sb.toString().toUpperCase();
+
+        //System.out.println(new String(Hex.encode(tutto)));
+
+        System.exit(0);
     }
+
 
 
     /**

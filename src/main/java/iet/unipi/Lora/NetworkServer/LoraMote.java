@@ -1,15 +1,9 @@
 package iet.unipi.Lora.NetworkServer;
 
-import javax.crypto.BadPaddingException;
-import javax.crypto.Cipher;
-import javax.crypto.IllegalBlockSizeException;
-import javax.crypto.NoSuchPaddingException;
-import javax.crypto.spec.SecretKeySpec;
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
-import java.security.InvalidKeyException;
-import java.security.Key;
-import java.security.NoSuchAlgorithmException;
+import org.apache.commons.lang.ArrayUtils;
+import org.bouncycastle.util.encoders.Hex;
+
+import java.util.Arrays;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
@@ -24,9 +18,9 @@ public class LoraMote {
 
 
 
-    public final long devEUI;
-    public final long appEUI;
-    public final int devAddress;
+    public final byte[] devEUI;
+    public final byte[] appEUI;
+    public final byte[] devAddress;
     public final byte[] appKey;
     public final byte[] netSessionKey;
     public final byte[] appSessionKey;
@@ -46,7 +40,7 @@ public class LoraMote {
      * @param appSessionKey
      */
 
-    public LoraMote(long devEUI, long appEUI, int devAddress, byte[] appKey, byte[] netSessionKey, byte[] appSessionKey) {
+    public LoraMote(byte[] devEUI, byte[] appEUI, byte[] devAddress, byte[] appKey, byte[] netSessionKey, byte[] appSessionKey) {
         this.devEUI = devEUI;
         this.appEUI = appEUI;
         this.devAddress = devAddress;
@@ -69,7 +63,24 @@ public class LoraMote {
      */
 
     public LoraMote(String devEUI, String appEUI, String devAddress, String appKey, String netSessionKey, String appSessionKey) {
-        this(Long.parseLong(devEUI,16), Long.parseLong(appEUI,16), Integer.parseInt(devAddress,16), parseHexKey(appKey), parseHexKey(netSessionKey), parseHexKey(appSessionKey));
+        byte[] dev_eui = Hex.decode(devEUI);
+        ArrayUtils.reverse(dev_eui); // Store little endian
+        this.devEUI = dev_eui;
+
+        byte[] app_eui = Hex.decode(appEUI);
+        ArrayUtils.reverse(app_eui); // Store little endian
+        this.appEUI = app_eui;
+
+        byte[] dev_address = Hex.decode(devAddress);
+        ArrayUtils.reverse(dev_address); // Store little endian
+        this.devAddress = dev_address;
+
+        this.appKey = Hex.decode(appKey);
+        this.netSessionKey = Hex.decode(netSessionKey);
+        this.appSessionKey = Hex.decode(appSessionKey);
+
+        this.frameCounterUp = 0;
+        this.frameCounterDown = 0;
     }
 
 
@@ -78,26 +89,12 @@ public class LoraMote {
      * @param devAddress
      */
 
-    public LoraMote(int devAddress) {
-        this(0,0,devAddress,null,null,null);
+    public LoraMote(byte[] devAddress) {
+        this(null,null,devAddress,null,null,null);
     }
 
 
-    /**
-     * Convenience method to parse key string
-     * E.g. "0a1b2c3d" ==> { 0x0a, 0x1b, 0x2c, 0x3d }
-     * @param key
-     * @return
-     */
 
-    public static byte[] parseHexKey(String key) {
-        int len = key.length() / 2;
-        byte[] data = new byte[len];
-        for (int i = 0; i < len; i++) {
-            data[i] = (byte) ((Character.digit(key.charAt(2*i), 16) << 4) + Character.digit(key.charAt(2*i+1), 16));
-        }
-        return data;
-    }
 
     /*
     public static byte[] getSessionKey(byte[] appKey, byte flag, byte[] appNonce, byte[] netID, short devNonce) {
@@ -139,12 +136,70 @@ public class LoraMote {
     }*/
 
 
+    /**
+     * Get dev eui as string
+     * @return
+     */
+
+    public String getDevEUI() {
+        return formatEUI(this.devEUI);
+    }
+
+
+    /**
+     * Get App eui as string
+     * @return
+     */
+
+    public String getAppEUI() {
+        return formatEUI(this.appEUI);
+    }
+
+
+    /**
+     * Format EUI in a readble way
+     * @param eui EUI expressed as a number
+     * @return EUI String like AA:BB:CC:DD:EE:FF:GG:HH
+     */
+
+    private String formatEUI(byte[] eui) {
+        //String s = String.format("%016X",eui);
+        StringBuilder sb = new StringBuilder(23);
+
+        for (int i=0; i<8; i++) {
+            if (sb.length() > 0) {
+                sb.append(':');
+            }
+            sb.append(String.format("%02X",eui[i]));
+        }
+        return sb.toString().toUpperCase();
+    }
+
+
+    /**
+     * Get device address as string
+     * @return
+     */
+
+    public String getDevAddress() {
+        StringBuilder sb = new StringBuilder(11);
+
+        for (int i=0; i<4; i++) {
+            if (sb.length() > 0) {
+                sb.append('.');
+            }
+            sb.append(String.format("%02X",this.devAddress[i]));
+        }
+        return sb.toString().toUpperCase();
+    }
+
+
     @Override
     public boolean equals(Object o) {
         if(!(o instanceof LoraMote)) {
             return false;
         }
         LoraMote other = (LoraMote) o;
-        return this.devAddress == other.devAddress;
+        return Arrays.equals(this.devAddress,other.devAddress);
     }
 }

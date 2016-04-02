@@ -1,19 +1,17 @@
 package iet.unipi.Lora.NetworkServer;
 
+import org.apache.commons.lang.ArrayUtils;
 import org.bouncycastle.crypto.engines.AESEngine;
 import org.bouncycastle.crypto.macs.CMac;
 import org.bouncycastle.crypto.params.KeyParameter;
 
-import javax.crypto.BadPaddingException;
+
 import javax.crypto.Cipher;
-import javax.crypto.IllegalBlockSizeException;
-import javax.crypto.NoSuchPaddingException;
 import javax.crypto.spec.SecretKeySpec;
+import java.lang.reflect.Array;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.security.InvalidKeyException;
 import java.security.Key;
-import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 import java.util.Base64;
 
@@ -102,11 +100,10 @@ public class MACMessage {
         int payloadLen = (frameMessage.payload != null) ? frameMessage.payload.length + 1 : 0;
 
         // Build Encrypted payload from FrameMessage Message
-        ByteBuffer bb = ByteBuffer.allocate(FrameMessage.HEADER_LEN + optLen + payloadLen);
-        bb.order(ByteOrder.LITTLE_ENDIAN);
+        ByteBuffer bb = ByteBuffer.allocate(FrameMessage.HEADER_LEN + optLen + payloadLen).order(ByteOrder.LITTLE_ENDIAN);
 
         // Put frameMessage header == 7 bytes
-        bb.putInt(frameMessage.devAddress);
+        bb.put(frameMessage.devAddress);
         bb.put(frameMessage.control);
         bb.putShort(frameMessage.counter);
 
@@ -147,22 +144,23 @@ public class MACMessage {
     }
 
 
-    /*
+
     public MACMessage(JoinAccept joinAccept, LoraMote mote) {
         this.type = JOIN_ACCEPT;
         this.lorawanVersion = LORAWAN_1;
         this.dir = DOWNSTREAM;
 
-        ByteBuffer bb = ByteBuffer.allocate(JoinAccept.JOIN_ACCEPT_LENGTH).order(ByteOrder.LITTLE_ENDIAN);
+        ByteBuffer bb = ByteBuffer.allocate(JoinAccept.JOIN_ACCEPT_LENGTH + joinAccept.getChannels().length).order(ByteOrder.LITTLE_ENDIAN);
         bb.put(joinAccept.appNonce);
         bb.put(joinAccept.netID);
-        bb.putInt(joinAccept.devAddress);
+        bb.put(joinAccept.devAddress);
         bb.put(joinAccept.DLsettings);
         bb.put(joinAccept.RxDelay);
+        bb.put(joinAccept.getChannels());
         this.payload = bb.array();
 
         this.MIC = computeJoinAcceptMIC(mote.appKey);
-    }*/
+    }
 
 
     /**
@@ -173,6 +171,7 @@ public class MACMessage {
 
     private byte[] computeMIC(LoraMote mote) {
         int frameCounter = (this.dir == UPSTREAM) ? mote.frameCounterUp : mote.frameCounterDown;
+        System.out.println("MIC direction: " + this.dir + " , counter: " + frameCounter);
 
         ByteBuffer bb = ByteBuffer.allocate(B0_LEN + 1 + this.payload.length).order(ByteOrder.LITTLE_ENDIAN);
 
@@ -180,7 +179,7 @@ public class MACMessage {
         bb.put((byte) 0x49);
         bb.putInt(0x00);
         bb.put(this.dir);
-        bb.putInt(mote.devAddress);
+        bb.put(mote.devAddress);
         bb.putInt(frameCounter);
         bb.put((byte) 0x00);
         bb.put((byte) ((this.payload.length + 1) & 0xFF));
@@ -203,8 +202,13 @@ public class MACMessage {
     }
 
 
-    /*
-    private int computeJoinAcceptMIC(byte[] appKey) {
+    /**
+     *
+     * @param appKey
+     * @return
+     */
+
+    private byte[] computeJoinAcceptMIC(byte[] appKey) {
         ByteBuffer bb = ByteBuffer.allocate(1 + payload.length).order(ByteOrder.LITTLE_ENDIAN);
         byte mac_header = (byte) (((this.type << 5) + this.lorawanVersion) & 0xFF);
         bb.put(mac_header);
@@ -219,9 +223,8 @@ public class MACMessage {
         mac.doFinal(cmac, 0);
 
         // Get first 4 bytes as integer
-        ByteBuffer mic = ByteBuffer.wrap(cmac).order(ByteOrder.LITTLE_ENDIAN);
-        return mic.getInt();
-    }*/
+        return Arrays.copyOfRange(cmac,0,4);
+    }
 
 
     /**
@@ -262,13 +265,17 @@ public class MACMessage {
         return res;
     }
 
-    /*
-    public byte[] getEncryptedJoinAccept(byte[] key) {
-        ByteBuffer bb = ByteBuffer.allocate(this.payload.length + 4).order(ByteOrder.LITTLE_ENDIAN);
-        bb.put(this.payload);
-        bb.putInt(this.MIC);
 
+    /**
+     *
+     * @param key
+     * @return
+     */
+
+    public byte[] getEncryptedJoinAccept(byte[] key) {
+        byte[] toEncrypt = ArrayUtils.addAll(this.payload,this.MIC);
         byte[] encrypted = new byte[0];
+
         try {
             // Create key and cipher
             Key aesKey = new SecretKeySpec(key, "AES");
@@ -276,26 +283,15 @@ public class MACMessage {
 
             // Create S
             cipher.init(Cipher.DECRYPT_MODE, aesKey);
-            encrypted = cipher.doFinal(bb.array());
-        } catch (NoSuchAlgorithmException e) {
-            e.printStackTrace();
-        } catch (NoSuchPaddingException e) {
-            e.printStackTrace();
-        } catch (BadPaddingException e) {
-            e.printStackTrace();
-        } catch (IllegalBlockSizeException e) {
-            e.printStackTrace();
-        } catch (InvalidKeyException e) {
+            encrypted = cipher.doFinal(toEncrypt);
+        } catch (Exception e) {
             e.printStackTrace();
         }
 
-        bb = ByteBuffer.allocate(1 + encrypted.length);
-
         byte mac_header = (byte) ((this.type << 5) + this.lorawanVersion);
-        bb.put(mac_header);
-        bb.put(encrypted);
-        byte[] res = bb.array();
+        byte[] res = ArrayUtils.add(encrypted,0,mac_header);
+
         //System.out.println("PHY Payload: " + Arrays.toString(res));
         return res;
-    }*/
+    }
 }

@@ -1,5 +1,9 @@
 package iet.unipi.Lora.NetworkServer;
 
+import org.apache.commons.lang.ArrayUtils;
+import org.bouncycastle.util.encoders.Hex;
+import org.jetbrains.annotations.NotNull;
+
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
 import javax.crypto.IllegalBlockSizeException;
@@ -28,7 +32,7 @@ public class FrameMessage {
     public static final byte ACK = 0x20;
     public static final byte FPending = 0x10;
 
-    public final int devAddress;
+    public final byte[] devAddress;
     public final byte control;
     public final short counter;
     public final int optLen;
@@ -49,7 +53,7 @@ public class FrameMessage {
      * @param dir
      */
 
-    public FrameMessage(int devAddress, byte control, short counter, byte[] options, int port, byte[] payload, int dir) {
+    public FrameMessage(byte[] devAddress, byte control, short counter, byte[] options, int port, byte[] payload, int dir) {
 
         // Check options
         if (options != null && options.length > 15) {
@@ -60,8 +64,23 @@ public class FrameMessage {
         }
         this.optLen = (this.options != null) ? this.options.length : 0;
 
+        // Initialize device address
+        if (devAddress == null) {
+            System.err.println("devAddress is null, Device address set to 00000000");
+            this.devAddress = Hex.decode("00000000");
+        } else if (devAddress.length < 4) {
+            this.devAddress = new byte[4];
+            System.arraycopy(devAddress,0,this.devAddress,0,devAddress.length);
+            System.err.printf("devAddress len is %d, Device Address set to %s", devAddress.length, Hex.encode(this.devAddress));
+        } else if (devAddress.length > 4) {
+            this.devAddress = new byte[4];
+            System.arraycopy(devAddress,0,this.devAddress,0,4);
+            System.err.printf("devAddress len is %d, Device Address set to %s", devAddress.length, Hex.encode(this.devAddress));
+        } else {
+            this.devAddress = devAddress;
+        }
+
         // Initialize other fields
-        this.devAddress = devAddress;
         this.control = (byte) ((control & 0xF0) + this.optLen);
         this.counter = counter;
         this.port = (byte) (port & 0xFF);
@@ -82,7 +101,7 @@ public class FrameMessage {
 
         byte[] data = macMessage.payload;
         ByteBuffer bb = ByteBuffer.wrap(data).order(ByteOrder.LITTLE_ENDIAN);
-        this.devAddress = bb.getInt(0);
+        this.devAddress = Arrays.copyOfRange(data, 0, 4);
         this.control = bb.get(4);
         System.out.println("Control: " + String.format("%16s", Integer.toBinaryString(this.control)).replace(' ', '0'));
         this.counter = bb.getShort(5);
@@ -103,33 +122,36 @@ public class FrameMessage {
         }
     }
 
+
+    /**
+     *
+     * @param key
+     * @return
+     */
+
     public byte[] getEncryptedPayload(byte[] key) {
         if (this.payload == null || this.payload.length == 0) {
             return new byte[0];
         }
 
-
         int payloadSize =  this.payload.length;
         int targetSize = (payloadSize % 16 == 0) ? payloadSize : ((payloadSize/16) + 1) * 16;
 
-        ByteBuffer bb = ByteBuffer.allocate(targetSize);
-        bb.order(ByteOrder.LITTLE_ENDIAN);
+        ByteBuffer bb = ByteBuffer.allocate(targetSize).order(ByteOrder.LITTLE_ENDIAN);
 
-        for (int i=0; i<targetSize; i+=16) {
-            bb.put(i, (byte) 1);
-            bb.put(i+1, (byte) 0);
-            bb.put(i+2, (byte) 0);
-            bb.put(i+3, (byte) 0);
-            bb.put(i+4, (byte) 0);
-            bb.put(i+5, this.dir);
-            bb.putInt(i+6, this.devAddress);
-            bb.putInt(i+10, (int) this.counter);
-            bb.put(i+14, (byte) 0);
-            bb.put(i+15, (byte) ((i/16)+1));
+        for (int i=1; i<=targetSize/16; i++) {
+            bb.put((byte) 1);
+            bb.putInt(0);
+            bb.put(this.dir);
+            bb.put(this.devAddress);
+            bb.putInt((int) this.counter);
+            bb.put((byte) 0);
+            bb.put((byte) i);
         }
 
         byte[] A = bb.array();
         //System.out.println(Arrays.toString(A));
+        byte[] decrypted = new byte[payloadSize];
 
         try {
             // Create key and cipher
@@ -139,29 +161,18 @@ public class FrameMessage {
             // Create S
             cipher.init(Cipher.ENCRYPT_MODE, aesKey);
             byte[] S = cipher.doFinal(A);
-
             System.out.println("S: " +  Arrays.toString(S));
 
-            byte[] decrypted = new byte[payloadSize];
-
+            // Encryption
             for (int i=0; i<payloadSize; i++) {
                 decrypted[i] = (byte) (this.payload[i] ^ S[i]);
             }
 
-            return decrypted;
-        } catch (NoSuchAlgorithmException e) {
-            e.printStackTrace();
-        } catch (NoSuchPaddingException e) {
-            e.printStackTrace();
-        } catch (BadPaddingException e) {
-            e.printStackTrace();
-        } catch (IllegalBlockSizeException e) {
-            e.printStackTrace();
-        } catch (InvalidKeyException e) {
+        } catch (Exception e) {
             e.printStackTrace();
         }
 
-        return null;
+        return decrypted;
     }
 
 
@@ -193,6 +204,7 @@ public class FrameMessage {
      * @return byte array to be put in frame option field
      */
 
+    @NotNull
     public static byte[] getRXParamSetupReq(int RX1DRoffset, int RX2DataRate, int frequency) {
         byte DLsettings = (byte) (((RX1DRoffset & 0x7) << 4) + (RX2DataRate & 0xF));
         ByteBuffer bb = ByteBuffer.allocate(5).order(ByteOrder.LITTLE_ENDIAN);
