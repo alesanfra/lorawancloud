@@ -40,8 +40,7 @@ public class LoraNetworkServer {
 
 
     private static final byte FRAME_PORT = 3;
-
-    public static final byte[] netID = Hex.decode("020100");
+    public static final byte[] NETWORK_ID = Hex.decode("020100");
 
 
     /**
@@ -54,7 +53,13 @@ public class LoraNetworkServer {
         System.out.println("Listening to: " + sock.getLocalAddress().getHostAddress() + " : " + sock.getLocalPort());
 
         // Add one mote (ABP join)
-        motes.add(new LoraMote("0102030405060708", "00", "05060708", "00", "01020304050607080910111213141516", "000102030405060708090A0B0C0D0E0F"));
+        motes.add(new LoraMote("A1B2C3D400000000", "1112131415161718", "A1B20000", "00000000000000000000000000000000", "01020304050607080910111213141516", "000102030405060708090A0B0C0D0E0F"));
+        motes.add(new LoraMote("A1B2C3D400000001", "1112131415161718", "A1B20001", "00000000000000000000000000000000", "01020304050607080910111213141516", "000102030405060708090A0B0C0D0E0F"));
+
+
+        // Add mote OTAA join
+        motes.add(new LoraMote("A1B2030405060708", "1112131415161718", "00000085", "01020304050607080910111213141516", "00", "00"));
+
 
         //debugMIC();
 
@@ -65,14 +70,14 @@ public class LoraNetworkServer {
             sock.receive(packet);
             long receiveTime = System.currentTimeMillis();
             GatewayMessage gm = new GatewayMessage(packet.getData());
-            System.out.println("\nReceived message from: " + packet.getAddress().getHostAddress() + ", Gateway: " + Long.toHexString(gm.gateway).toUpperCase());
+            System.out.println("\nReceived message from: " + packet.getAddress().getHostAddress() + ", Gateway: " + LoraMote.formatEUI(gm.gateway));
 
             switch (gm.type) {
                 case GatewayMessage.PUSH_DATA: {
                     System.out.println("PUSH_DATA received");
 
                     // Send PUSH_ACK
-                    GatewayMessage push_ack = new GatewayMessage(GatewayMessage.GWMP_VERSION_1, gm.token, GatewayMessage.PUSH_ACK, 0, null);
+                    GatewayMessage push_ack = new GatewayMessage(GatewayMessage.GWMP_V1, gm.token, GatewayMessage.PUSH_ACK, null, null);
                     sock.send(push_ack.getDatagramPacket(packet.getAddress(), packet.getPort()));
 
                     // Handle PUSH_DATA
@@ -85,7 +90,7 @@ public class LoraNetworkServer {
                             JSONObject rxpk = rxpkArray.getJSONObject(i);
                             String data = rxpk.getString("data");
                             long tmst = rxpk.getLong("tmst");
-                            System.out.println(String.format("Timestamp: %d, Size: %d, Data: %s",tmst,rxpk.getInt("size"),data));
+                            //System.out.println(String.format("Timestamp: %d, Size: %d, Data: %s",tmst,rxpk.getInt("size"),data));
 
                             MACMessage mm = new MACMessage(data);
 
@@ -93,11 +98,38 @@ public class LoraNetworkServer {
                                 case MACMessage.JOIN_REQUEST: {
                                     System.out.println("JOIN_REQUEST received");
                                     JoinRequest jr = new JoinRequest(mm);
+                                    jr.print();
+
+                                    // Cerco il mote
+                                    // TODO: cercare soluzione più efficente
+                                    LoraMote mote = null;
+                                    for (LoraMote m: motes) {
+                                        if (Arrays.equals(m.devEUI,jr.devEUI)) {
+                                            mote = m;
+                                            break;
+                                        }
+                                    }
+
+                                    if (mote == null) {
+                                        System.err.println("Join OTA: mote non trovato");
+                                        break;
+                                    }
+
+                                    JoinAccept ja = new JoinAccept(mote.devAddress);
+                                    MACMessage mac_ja = new MACMessage(ja,mote);
+                                    String txpk = GatewayMessage.getTxpk(false,tmst+JOIN_ACCEPT_DELAY1, rxpk.getDouble("freq"), RFCH, POWER, rxpk.getString("modu"), rxpk.getString("datr"), rxpk.getString("codr"), false, mac_ja.getEncryptedJoinAccept(mote.appKey));
+                                    GatewayMessage gw_ja = new GatewayMessage(GatewayMessage.GWMP_V1, (short) 0,GatewayMessage.PULL_RESP,null,txpk);
+                                    sock.send(gw_ja.getDatagramPacket(pull_resp_addr,pull_resp_port));
+
+                                    // Creo le chiavi
+                                    mote.createSessionKeys(jr.devNonce, ja.appNonce, ja.netID);
+                                    mote.frameCounterDown = 0;
+                                    mote.frameCounterUp = 0;
                                     break;
                                 }
                                 case MACMessage.CONFIRMED_DATA_UP: {
                                     FrameMessage fm = new FrameMessage(mm);
-                                    System.out.printf("CONFIRMED_DATA_UP received from address: %08X \tport: %d \tframe counter: %d \tack flag: %d\n", fm.devAddress, fm.port, fm.counter, fm.getAck());
+                                    System.out.printf("CONFIRMED_DATA_UP received from address: %s \tport: %d \tframe counter: %d \tack flag: %d\n", fm.getDevAddress(), fm.port, fm.counter, fm.getAck());
 
                                     // Find mote into Network Server list
                                     int index = motes.indexOf(new LoraMote(fm.devAddress));
@@ -121,22 +153,23 @@ public class LoraNetworkServer {
                                     byte[] decrypted = fm.getDecryptedPayload(mote.appSessionKey);
                                     System.out.println("Received payload: " + Arrays.toString(decrypted));
 
+
                                     if (pull_resp_addr != null) {
-                                        //byte[] r = "Hello world".getBytes(StandardCharsets.US_ASCII);
                                         FrameMessage frame_resp = new FrameMessage(fm.devAddress, FrameMessage.ACK, (short) mote.frameCounterDown, null, FRAME_PORT, null, FrameMessage.DOWNSTREAM);
-                                        MACMessage mac_resp = new MACMessage(MACMessage.UNCONFIRMED_DATA_DOWN, frame_resp, mote);
+                                        MACMessage mac_resp = new MACMessage(MACMessage.CONFIRMED_DATA_DOWN, frame_resp, mote);
                                         //String resp_str = GatewayMessage.getTxpk(false, tmst + RECEIVE_DELAY1 , rxpk.getDouble("freq"), RFCH, POWER, rxpk.getString("modu"), rxpk.getString("datr"), rxpk.getString("codr"), false, mac_resp.getBytes());
                                         String resp_str = GatewayMessage.getTxpk(false, tmst + RECEIVE_DELAY2, 869.525, RFCH, POWER, "LORA", "SF12BW125", "4/5", false, mac_resp.getBytes());
 
-                                        GatewayMessage gw_resp = new GatewayMessage(gm.version, (short) 0, GatewayMessage.PULL_RESP, 0, resp_str);
-                                        sock.send(gw_resp.getDatagramPacket(pull_resp_addr, pull_resp_port));
+                                        GatewayMessage gw_resp = new GatewayMessage(GatewayMessage.GWMP_V1, (short) 0, GatewayMessage.PULL_RESP, null, resp_str);
+                                        //sock.send(gw_resp.getDatagramPacket(pull_resp_addr, pull_resp_port));
+                                        mote.frameCounterDown++;
                                     }
 
                                     break;
                                 }
                                 case MACMessage.UNCONFIRMED_DATA_UP: {
                                     FrameMessage fm = new FrameMessage(mm);
-                                    System.out.printf("UNCONFIRMED_DATA_UP received from address: %08X \tport: %d \tframe counter: %d \tack flag: %d\n", fm.devAddress, fm.port, fm.counter, fm.getAck());
+                                    System.out.printf("UNCONFIRMED_DATA_UP received from address: %s \tport: %d \tframe counter: %d \tack flag: %d\n", fm.getDevAddress(), fm.port, fm.counter, fm.getAck());
 
                                     // Find mote into Network Server list
                                     int index = motes.indexOf(new LoraMote(fm.devAddress));
@@ -160,8 +193,7 @@ public class LoraNetworkServer {
 
                                     // Decrypt payload
                                     byte[] decrypted = fm.getDecryptedPayload(mote.appSessionKey);
-                                    System.out.print("Payload: ");
-                                    System.out.println(Arrays.toString(decrypted));
+                                    System.out.print("Payload: "+ Arrays.toString(decrypted));
 
 
                                     /*
@@ -218,36 +250,8 @@ public class LoraNetworkServer {
                     this.pull_resp_port = packet.getPort();
 
                     // Send PULL_ACK
-                    GatewayMessage pull_ack = new GatewayMessage(gm.version, gm.token, GatewayMessage.PULL_ACK, 0, null);
+                    GatewayMessage pull_ack = new GatewayMessage(gm.version, gm.token, GatewayMessage.PULL_ACK, gm.gateway, null);
                     sock.send(pull_ack.getDatagramPacket(packet.getAddress(), packet.getPort()));
-
-                    /*
-                    // Send PULL_RESP
-                    // TODO: Send only to motes connected to the sender gateway (maybe too complex)
-                    for (LoraMote mote: motes) {
-
-                        for (GatewayMessage resp = mote.pullResp.poll(); resp != null; resp = mote.pullResp.poll()) {
-                            System.out.println("Send message to mote: " + Long.toHexString(mote.devEUI));
-                            sock.send(resp.getDatagramPacket(pull_resp_addr,pull_resp_port));
-                            mote.frameCounter++;
-                        }
-                    }*/
-
-                    /*
-                    // Provo a mandare dati su RX2
-                    if (pull_resp_addr != null) {
-                        LoraMote mote = new LoraMote("0102030405060708", "0", "05060708", "", "01020304050607080910111213141516", "000102030405060708090A0B0C0D0E0F");
-
-                        byte[] resp_payload = "hello".getBytes(StandardCharsets.US_ASCII);
-                        FrameMessage frame_resp = new FrameMessage(mote.devAddress,(byte) 0,(byte) 0, null, 5, resp_payload, FrameMessage.DOWNSTREAM);
-                        MACMessage mac_resp = new MACMessage(MACMessage.UNCONFIRMED_DATA_DOWN, frame_resp, mote);
-                        byte[] resp = mac_resp.getBytes();
-                        String resp_str = GatewayMessage.getTxpk(true, 0, 869.525, 0, 14, "LORA", "SF12BW125", "4/5", false, resp.length, resp);
-                        GatewayMessage gw_resp = new GatewayMessage(gm.version,(short) 0, GatewayMessage.PULL_RESP, 0, resp_str);
-                        //System.out.println(Arrays.toString(gw_resp.getBytes()));
-
-                        sock.send(gw_resp.getDatagramPacket(pull_resp_addr,pull_resp_port));
-                    }*/
 
                     break;
                 }

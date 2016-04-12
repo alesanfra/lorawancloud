@@ -103,7 +103,7 @@ public class FrameMessage {
         ByteBuffer bb = ByteBuffer.wrap(data).order(ByteOrder.LITTLE_ENDIAN);
         this.devAddress = Arrays.copyOfRange(data, 0, 4);
         this.control = bb.get(4);
-        System.out.println("Control: " + String.format("%16s", Integer.toBinaryString(this.control)).replace(' ', '0'));
+        //System.out.println("Control: " + String.format("%16s", Integer.toBinaryString(this.control)).replace(' ', '0'));
         this.counter = bb.getShort(5);
         this.optLen = control & 0xF;
 
@@ -161,7 +161,7 @@ public class FrameMessage {
             // Create S
             cipher.init(Cipher.ENCRYPT_MODE, aesKey);
             byte[] S = cipher.doFinal(A);
-            System.out.println("S: " +  Arrays.toString(S));
+            //System.out.println("S: " +  Arrays.toString(S));
 
             // Encryption
             for (int i=0; i<payloadSize; i++) {
@@ -213,6 +213,26 @@ public class FrameMessage {
         byte[] req = bb.array();
         System.out.println("RXParamSetupReq: " + Arrays.toString(req));
         return Arrays.copyOfRange(req,0,4);
+    }
+
+    /**
+     * Get device address as string
+     * @return
+     */
+
+    public String getDevAddress() {
+        byte[] dev_addr = Arrays.copyOf(devAddress,devAddress.length);
+        ArrayUtils.reverse(dev_addr);
+
+        StringBuilder sb = new StringBuilder(11);
+
+        for (int i=0; i<4; i++) {
+            if (sb.length() > 0) {
+                sb.append('.');
+            }
+            sb.append(String.format("%02X",dev_addr[i]));
+        }
+        return sb.toString().toUpperCase();
     }
 
 }

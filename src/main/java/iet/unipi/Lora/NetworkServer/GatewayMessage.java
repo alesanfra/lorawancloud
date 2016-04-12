@@ -21,8 +21,8 @@ public class GatewayMessage {
     public static final int MAX_LENGTH = 2400;
 
     // GWMP protocol version
-    public static final byte GWMP_VERSION_1 = 0x01;
-    public static final byte GWMP_VERSION_2 = 0x02;
+    public static final byte GWMP_V1 = 0x01;
+    public static final byte GWMP_V2 = 0x02;
 
     // GWMP message type
     public static final byte PUSH_DATA = 0x00;
@@ -32,11 +32,11 @@ public class GatewayMessage {
     public static final byte PULL_RESP = 0x03;
     public static final byte TX_ACK = 0x05;
 
-    public byte version;
-    public short token;
-    public byte type;
-    public long gateway;
-    public String payload;
+    public final byte version;
+    public final short token;
+    public final byte type;
+    public final byte[] gateway;
+    public final String payload;
 
 
     /**
@@ -47,18 +47,22 @@ public class GatewayMessage {
     public GatewayMessage(byte[] message) {
         ByteBuffer bb = ByteBuffer.wrap(message);
         bb.order(ByteOrder.BIG_ENDIAN);
-        this.version = bb.get(0);
-        this.token = bb.getShort(1);
-        this.type = bb.get(3);
+        this.version = bb.get();
+        this.token = bb.getShort();
+        this.type = bb.get();
 
         int startPayload = 4;
+        this.gateway = new byte[8];
+
         if (type != PUSH_ACK && type != TX_ACK) {
-            this.gateway = bb.getLong(4);
+            bb.get(this.gateway,0,8);
             startPayload += 8;
         }
 
         if (type == PUSH_DATA || type == PULL_RESP || type == TX_ACK) {
             this.payload = (new String(Arrays.copyOfRange(message,startPayload,message.length), StandardCharsets.US_ASCII)).trim();
+        } else {
+            this.payload = null;
         }
     }
 
@@ -72,7 +76,7 @@ public class GatewayMessage {
      * @param payload JSON object containg BASE64 encoded LoRa frames and other informations
      */
 
-    public GatewayMessage(byte version, short token, byte type, long gateway, String payload) {
+    public GatewayMessage(byte version, short token, byte type, byte[] gateway, String payload) {
         this.version = version;
         this.token = token;
         this.type = type;
@@ -114,8 +118,8 @@ public class GatewayMessage {
         txpk.put("ipol",ipol);
         txpk.put("size",data.length);
         String b64Data = Base64.getEncoder().encodeToString(data);
-        System.out.println("Base 64 data: " + b64Data + " , lunghezza " + b64Data.length());
         txpk.put("data",b64Data);
+        txpk.put("ncrc",true);
 
         JSONObject payload = new JSONObject();
         payload.put("txpk",txpk);
@@ -139,7 +143,7 @@ public class GatewayMessage {
         int msgLen = 4;
 
         if (type != PUSH_ACK && type != TX_ACK && type != PULL_RESP) {
-            bb.putLong(gateway);
+            bb.put(gateway);
             msgLen += 8;
         }
 

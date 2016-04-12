@@ -3,6 +3,11 @@ package iet.unipi.Lora.NetworkServer;
 import org.apache.commons.lang.ArrayUtils;
 import org.bouncycastle.util.encoders.Hex;
 
+import javax.crypto.Cipher;
+import javax.crypto.spec.SecretKeySpec;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.security.Key;
 import java.util.Arrays;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -13,8 +18,8 @@ import java.util.concurrent.ConcurrentLinkedQueue;
  */
 
 public class LoraMote {
-    public static final byte NET_SESSION_KEY = 0x01;
-    public static final byte APP_SESSION_KEY = 0x02;
+    public static final byte NET_SESSION_KEY_FLAG = 0x01;
+    public static final byte APP_SESSION_KEY_FLAG = 0x02;
 
 
 
@@ -22,8 +27,8 @@ public class LoraMote {
     public final byte[] appEUI;
     public final byte[] devAddress;
     public final byte[] appKey;
-    public final byte[] netSessionKey;
-    public final byte[] appSessionKey;
+    public byte[] netSessionKey;
+    public byte[] appSessionKey;
     public int frameCounterUp;
     public int frameCounterDown;
 
@@ -96,44 +101,38 @@ public class LoraMote {
 
 
 
-    /*
-    public static byte[] getSessionKey(byte[] appKey, byte flag, byte[] appNonce, byte[] netID, short devNonce) {
 
-        ByteBuffer bb = ByteBuffer.allocate().order(ByteOrder.LITTLE_ENDIAN);
+    private byte[] getSessionKey(byte flag, byte[] appNonce, byte[] netID, byte[] devNonce) {
+
+        ByteBuffer bb = ByteBuffer.allocate(9).order(ByteOrder.LITTLE_ENDIAN);
 
         bb.put(flag);
         bb.put(appNonce);
         bb.put(netID);
-        bb.putShort(devNonce);
+        bb.put(devNonce);
+
+        byte[] encrypted = new byte[16];
 
         try {
             // Create key and cipher
-            Key aesKey = new SecretKeySpec(appKey, "AES");
-            Cipher cipher = Cipher.getInstance("AES/ECB");
+            Key aesKey = new SecretKeySpec(this.appKey, "AES");
+            Cipher cipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
 
             // Create S
             cipher.init(Cipher.ENCRYPT_MODE, aesKey);
-            byte[] S = cipher.doFinal(A);
-
-            byte[] decrypted = new byte[payloadSize];
-
-            for (int i=0; i<payloadSize; i++) {
-                decrypted[i] = (byte) (this.payload[i] ^ S[i]);
-            }
-
-            return decrypted;
-        } catch (NoSuchAlgorithmException e) {
-            e.printStackTrace();
-        } catch (NoSuchPaddingException e) {
-            e.printStackTrace();
-        } catch (BadPaddingException e) {
-            e.printStackTrace();
-        } catch (IllegalBlockSizeException e) {
-            e.printStackTrace();
-        } catch (InvalidKeyException e) {
+            encrypted = cipher.doFinal(bb.array());
+        } catch (Exception e) {
             e.printStackTrace();
         }
-    }*/
+
+        return encrypted;
+    }
+
+
+    public void createSessionKeys(byte[] devNonce, byte[] appNonce, byte[] netID) {
+        this.netSessionKey = getSessionKey(NET_SESSION_KEY_FLAG, appNonce, netID, devNonce);
+        this.appSessionKey = getSessionKey(APP_SESSION_KEY_FLAG, appNonce, netID, devNonce);
+    }
 
 
     /**
@@ -142,7 +141,9 @@ public class LoraMote {
      */
 
     public String getDevEUI() {
-        return formatEUI(this.devEUI);
+        byte[] dev_eui = Arrays.copyOf(this.devEUI,this.devEUI.length);
+        ArrayUtils.reverse(dev_eui);
+        return formatEUI(dev_eui);
     }
 
 
@@ -152,6 +153,8 @@ public class LoraMote {
      */
 
     public String getAppEUI() {
+        byte[] app_eui = Arrays.copyOf(this.appEUI,this.appEUI.length);
+        ArrayUtils.reverse(app_eui);
         return formatEUI(this.appEUI);
     }
 
@@ -162,7 +165,7 @@ public class LoraMote {
      * @return EUI String like AA:BB:CC:DD:EE:FF:GG:HH
      */
 
-    private String formatEUI(byte[] eui) {
+    public static String formatEUI(byte[] eui) {
         //String s = String.format("%016X",eui);
         StringBuilder sb = new StringBuilder(23);
 
@@ -182,13 +185,16 @@ public class LoraMote {
      */
 
     public String getDevAddress() {
+        byte[] dev_addr = Arrays.copyOf(devAddress,devAddress.length);
+        ArrayUtils.reverse(dev_addr);
+
         StringBuilder sb = new StringBuilder(11);
 
         for (int i=0; i<4; i++) {
             if (sb.length() > 0) {
                 sb.append('.');
             }
-            sb.append(String.format("%02X",this.devAddress[i]));
+            sb.append(String.format("%02X",dev_addr[i]));
         }
         return sb.toString().toUpperCase();
     }

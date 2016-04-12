@@ -4,6 +4,7 @@ import org.apache.commons.lang.ArrayUtils;
 import org.bouncycastle.crypto.engines.AESEngine;
 import org.bouncycastle.crypto.macs.CMac;
 import org.bouncycastle.crypto.params.KeyParameter;
+import org.bouncycastle.util.encoders.Hex;
 
 
 import javax.crypto.Cipher;
@@ -54,7 +55,7 @@ public class MACMessage {
 
     public MACMessage(String physicalPayload) {
         byte[] data = Base64.getDecoder().decode(physicalPayload.getBytes());
-        System.out.println("PHY Payload: " + Arrays.toString(data));
+        //System.out.println("PHY Payload: " + Arrays.toString(data));
 
         // Parsing Header
         this.type = (data[0] & 0xE0) >> 5;
@@ -140,7 +141,7 @@ public class MACMessage {
         // Calculate MIC
         this.MIC = this.computeMIC(mote);
 
-        System.out.println("MAC Payload: " + Arrays.toString(this.payload));
+        //System.out.println("MAC Payload: " + Arrays.toString(this.payload));
     }
 
 
@@ -150,13 +151,20 @@ public class MACMessage {
         this.lorawanVersion = LORAWAN_1;
         this.dir = DOWNSTREAM;
 
-        ByteBuffer bb = ByteBuffer.allocate(JoinAccept.JOIN_ACCEPT_LENGTH + joinAccept.getChannels().length).order(ByteOrder.LITTLE_ENDIAN);
+        int channels_len = joinAccept.getChannels().length;
+
+
+        ByteBuffer bb = ByteBuffer.allocate(JoinAccept.JOIN_ACCEPT_LENGTH + channels_len).order(ByteOrder.LITTLE_ENDIAN);
         bb.put(joinAccept.appNonce);
         bb.put(joinAccept.netID);
         bb.put(joinAccept.devAddress);
         bb.put(joinAccept.DLsettings);
         bb.put(joinAccept.RxDelay);
-        bb.put(joinAccept.getChannels());
+
+        if (channels_len > 0) {
+            bb.put(joinAccept.getChannels());
+        }
+
         this.payload = bb.array();
 
         this.MIC = computeJoinAcceptMIC(mote.appKey);
@@ -171,7 +179,7 @@ public class MACMessage {
 
     private byte[] computeMIC(LoraMote mote) {
         int frameCounter = (this.dir == UPSTREAM) ? mote.frameCounterUp : mote.frameCounterDown;
-        System.out.println("MIC direction: " + this.dir + " , counter: " + frameCounter);
+        //System.out.println("MIC direction: " + this.dir + " , counter: " + frameCounter);
 
         ByteBuffer bb = ByteBuffer.allocate(B0_LEN + 1 + this.payload.length).order(ByteOrder.LITTLE_ENDIAN);
 
@@ -189,7 +197,7 @@ public class MACMessage {
         bb.put(mac_header);
         bb.put(this.payload);
         byte[] stream = bb.array();
-        System.out.println("Stream input: " + Arrays.toString(stream));
+        //System.out.println("Stream input: " + Arrays.toString(stream));
 
         // Calculate CMAC
         byte[] cmac = new byte[16];
@@ -235,7 +243,7 @@ public class MACMessage {
 
     public boolean checkIntegrity(LoraMote mote) {
         byte[] calculatedMIC = this.computeMIC(mote);
-        System.out.printf("Received MIC: %s, Calculated MIC: %s", Arrays.toString(this.MIC), Arrays.toString(calculatedMIC));
+        System.out.printf("Received MIC: %s, Calculated MIC: %s", new String(Hex.encode(this.MIC)), new String(Hex.encode(calculatedMIC)));
         boolean validMIC = Arrays.equals(this.MIC,calculatedMIC);
 
         if (validMIC) {
@@ -261,7 +269,7 @@ public class MACMessage {
         bb.put(this.payload);
         bb.put(this.MIC);
         byte[] res = bb.array();
-        System.out.println("PHY Payload: " + Arrays.toString(res));
+        System.out.println("PHY Payload: " + new String(Hex.encode(res)));
         return res;
     }
 
