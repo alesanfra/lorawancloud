@@ -21,6 +21,7 @@ public class LoraMote {
     public static final byte NET_SESSION_KEY_FLAG = 0x01;
     public static final byte APP_SESSION_KEY_FLAG = 0x02;
 
+    private static byte[] pad16Array = {0,0,0,0,0,0,0};
 
 
     public final byte[] devEUI;
@@ -104,19 +105,20 @@ public class LoraMote {
 
     private byte[] getSessionKey(byte flag, byte[] appNonce, byte[] netID, byte[] devNonce) {
 
-        ByteBuffer bb = ByteBuffer.allocate(9).order(ByteOrder.LITTLE_ENDIAN);
+        ByteBuffer bb = ByteBuffer.allocate(16).order(ByteOrder.LITTLE_ENDIAN);
 
         bb.put(flag);
         bb.put(appNonce);
         bb.put(netID);
         bb.put(devNonce);
+        bb.put(pad16Array);
 
         byte[] encrypted = new byte[16];
 
         try {
             // Create key and cipher
             Key aesKey = new SecretKeySpec(this.appKey, "AES");
-            Cipher cipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
+            Cipher cipher = Cipher.getInstance("AES/ECB/NoPadding");
 
             // Create S
             cipher.init(Cipher.ENCRYPT_MODE, aesKey);

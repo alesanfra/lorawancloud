@@ -21,7 +21,9 @@ public class LoraNetworkServer {
     private static final int BUFFER_LEN = 2400;
     private static final int UDP_PORT = 1700;
     private static final int RFCH = 0;
-    private static final int POWER = 15;
+    private static final int POWER = 27;
+    private static final boolean IPOL = true;
+    private static final boolean NCRC = true;
 
     // Temporizing
     public static final long RECEIVE_DELAY1 = 1000000; // microsec
@@ -40,7 +42,7 @@ public class LoraNetworkServer {
 
 
     private static final byte FRAME_PORT = 3;
-    public static final byte[] NETWORK_ID = Hex.decode("020100");
+    public static final byte[] NETWORK_ID = Hex.decode("000000");
 
 
     /**
@@ -88,11 +90,8 @@ public class LoraNetworkServer {
                         JSONArray rxpkArray = jsonPayload.getJSONArray("rxpk");
                         for (int i = 0; i < rxpkArray.length(); i++) {
                             JSONObject rxpk = rxpkArray.getJSONObject(i);
-                            String data = rxpk.getString("data");
                             long tmst = rxpk.getLong("tmst");
-                            //System.out.println(String.format("Timestamp: %d, Size: %d, Data: %s",tmst,rxpk.getInt("size"),data));
-
-                            MACMessage mm = new MACMessage(data);
+                            MACMessage mm = new MACMessage(rxpk.getString("data"));
 
                             switch (mm.type) {
                                 case MACMessage.JOIN_REQUEST: {
@@ -100,28 +99,46 @@ public class LoraNetworkServer {
                                     JoinRequest jr = new JoinRequest(mm);
                                     jr.print();
 
-                                    // Cerco il mote
-                                    // TODO: cercare soluzione più efficente
-                                    LoraMote mote = null;
-                                    for (LoraMote m: motes) {
-                                        if (Arrays.equals(m.devEUI,jr.devEUI)) {
-                                            mote = m;
-                                            break;
-                                        }
-                                    }
-
+                                    // Search mote
+                                    LoraMote mote = getMotebyDevEUI(jr.devEUI);
                                     if (mote == null) {
                                         System.err.println("Join OTA: mote non trovato");
                                         break;
                                     }
 
+                                    // Create Join Accept and encapsulate it in Mac Message
                                     JoinAccept ja = new JoinAccept(mote.devAddress);
                                     MACMessage mac_ja = new MACMessage(ja,mote);
-                                    String txpk = GatewayMessage.getTxpk(false,tmst+JOIN_ACCEPT_DELAY1, rxpk.getDouble("freq"), RFCH, POWER, rxpk.getString("modu"), rxpk.getString("datr"), rxpk.getString("codr"), false, mac_ja.getEncryptedJoinAccept(mote.appKey));
-                                    GatewayMessage gw_ja = new GatewayMessage(GatewayMessage.GWMP_V1, (short) 0,GatewayMessage.PULL_RESP,null,txpk);
+                                    System.out.println("Join accept payload: " + new String(Hex.encode(mac_ja.payload)));
+
+                                    // Create json payload of GWMP message
+                                    String txpk = GatewayMessage.getTxpk(
+                                            false,
+                                            tmst + JOIN_ACCEPT_DELAY1,
+                                            rxpk.getDouble("freq"),
+                                            RFCH,
+                                            POWER,
+                                            rxpk.getString("modu"),
+                                            rxpk.getString("datr"),
+                                            rxpk.getString("codr"),
+                                            IPOL,
+                                            mac_ja.getEncryptedJoinAccept(mote.appKey),
+                                            NCRC
+                                    );
+
+                                    // Create GWMP message
+                                    GatewayMessage gw_ja = new GatewayMessage(
+                                            GatewayMessage.GWMP_V1,
+                                            (short) 0,
+                                            GatewayMessage.PULL_RESP,
+                                            null,
+                                            txpk
+                                    );
+
+                                    // Send Join Accept
                                     sock.send(gw_ja.getDatagramPacket(pull_resp_addr,pull_resp_port));
 
-                                    // Creo le chiavi
+                                    // Create keys
                                     mote.createSessionKeys(jr.devNonce, ja.appNonce, ja.netID);
                                     mote.frameCounterDown = 0;
                                     mote.frameCounterUp = 0;
@@ -156,12 +173,39 @@ public class LoraNetworkServer {
 
                                     if (pull_resp_addr != null) {
                                         FrameMessage frame_resp = new FrameMessage(fm.devAddress, FrameMessage.ACK, (short) mote.frameCounterDown, null, FRAME_PORT, null, FrameMessage.DOWNSTREAM);
-                                        MACMessage mac_resp = new MACMessage(MACMessage.CONFIRMED_DATA_DOWN, frame_resp, mote);
-                                        //String resp_str = GatewayMessage.getTxpk(false, tmst + RECEIVE_DELAY1 , rxpk.getDouble("freq"), RFCH, POWER, rxpk.getString("modu"), rxpk.getString("datr"), rxpk.getString("codr"), false, mac_resp.getBytes());
-                                        String resp_str = GatewayMessage.getTxpk(false, tmst + RECEIVE_DELAY2, 869.525, RFCH, POWER, "LORA", "SF12BW125", "4/5", false, mac_resp.getBytes());
+                                        MACMessage mac_resp = new MACMessage(MACMessage.UNCONFIRMED_DATA_DOWN, frame_resp, mote);
+
+                                        String resp_str = GatewayMessage.getTxpk(
+                                                false,
+                                                tmst + RECEIVE_DELAY1,
+                                                rxpk.getDouble("freq"),
+                                                RFCH,
+                                                POWER,
+                                                rxpk.getString("modu"),
+                                                rxpk.getString("datr"),
+                                                rxpk.getString("codr"),
+                                                IPOL,
+                                                mac_resp.getBytes(),
+                                                NCRC
+                                        );
+
+                                        /*
+                                        String resp_str = GatewayMessage.getTxpk(
+                                                false,
+                                                tmst + RECEIVE_DELAY2,
+                                                869.525000,
+                                                RFCH,
+                                                POWER,
+                                                "LORA",
+                                                "SF9BW125",
+                                                "4/5",
+                                                true,
+                                                mac_resp.getBytes(),
+                                                true
+                                        );*/
 
                                         GatewayMessage gw_resp = new GatewayMessage(GatewayMessage.GWMP_V1, (short) 0, GatewayMessage.PULL_RESP, null, resp_str);
-                                        //sock.send(gw_resp.getDatagramPacket(pull_resp_addr, pull_resp_port));
+                                        sock.send(gw_resp.getDatagramPacket(pull_resp_addr, pull_resp_port));
                                         mote.frameCounterDown++;
                                     }
 
@@ -194,43 +238,6 @@ public class LoraNetworkServer {
                                     // Decrypt payload
                                     byte[] decrypted = fm.getDecryptedPayload(mote.appSessionKey);
                                     System.out.print("Payload: "+ Arrays.toString(decrypted));
-
-
-                                    /*
-                                    // Provo a mandare dati su RX1
-                                    if (pull_resp_addr != null) {
-                                        byte[] resp_payload = "hello".getBytes(StandardCharsets.US_ASCII);
-                                        FrameMessage frame_resp = new FrameMessage(fm.devAddress,(byte) 0,(byte) 0, null, 3, resp_payload, FrameMessage.DOWNSTREAM);
-                                        MACMessage mac_resp = new MACMessage(MACMessage.UNCONFIRMED_DATA_DOWN, frame_resp, mote);
-                                        byte[] resp = mac_resp.getBytes();
-
-                                        long sendTime = rxpk.getLong("tmst") + RECEIVE_DELAY1;
-                                        String resp_str = GatewayMessage.getTxpk(false, sendTime, rxpk.getDouble("freq"), RFCH, POWER, rxpk.getString("modu"), rxpk.getString("datr"), rxpk.getString("codr"), false, resp.length, resp);
-
-                                        GatewayMessage gw_resp = new GatewayMessage(gm.version,(short) 0, GatewayMessage.PULL_RESP, 0, resp_str);
-                                        //System.out.println(Arrays.toString(gw_resp.getBytes()));
-
-                                        sock.send(gw_resp.getDatagramPacket(pull_resp_addr,pull_resp_port));
-
-                                        // Aggiungo alla lista da inviare
-                                        //mote.pullResp.add(gw_resp);
-                                        //mote.frameCounterDown++;
-                                    }
-                                    // Provo a mandare dati su RX2
-                                    if (pull_resp_addr != null) {
-                                        byte[] resp_payload = "hello".getBytes(StandardCharsets.US_ASCII);
-                                        //byte[] options = FrameMessage.getRXParamSetupReq(0,0,869525000);
-
-                                        FrameMessage frame_resp = new FrameMessage(fm.devAddress, (byte) 0, (short) 0, null, 3, resp_payload, FrameMessage.DOWNSTREAM);
-                                        MACMessage mac_resp = new MACMessage(MACMessage.UNCONFIRMED_DATA_DOWN, frame_resp, mote);
-                                        byte[] resp = mac_resp.getBytes();
-
-                                        long sendTime = rxpk.getLong("tmst") + RECEIVE_DELAY2;
-                                        String resp_str = GatewayMessage.getTxpk(false, sendTime, 869.525, RFCH, POWER, "LORA", "SF12BW125", "4/5", false, resp);
-
-                                        GatewayMessage gw_resp = new GatewayMessage(gm.version,(short) 0, GatewayMessage.PULL_RESP, 0, resp_str);
-                                        sock.send(gw_resp.getDatagramPacket(pull_resp_addr,pull_resp_port));
-                                    }*/
 
                                     break;
                                 }
@@ -267,6 +274,18 @@ public class LoraNetworkServer {
             System.out.println(String.format("Elapsed time %f sec", elapsedTime));
         }
 
+    }
+
+    private LoraMote getMotebyDevEUI(byte[] devEUI) {
+        // Cerco il mote iterativamente. TODO: cercare soluzione più efficente
+        LoraMote mote = null;
+        for (LoraMote m: motes) {
+            if (Arrays.equals(m.devEUI, devEUI)) {
+                mote = m;
+                break;
+            }
+        }
+        return mote;
     }
 
 
