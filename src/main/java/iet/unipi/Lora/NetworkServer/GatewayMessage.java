@@ -32,6 +32,7 @@ public class GatewayMessage {
     public static final byte PULL_RESP = 0x03;
     public static final byte TX_ACK = 0x05;
 
+    // Fields of a GWMP message
     public final byte version;
     public final short token;
     public final byte type;
@@ -84,23 +85,24 @@ public class GatewayMessage {
         this.payload = payload;
     }
 
-
     /**
-     * Build Json paylod for downstream messages
-     * @param imme
-     * @param tmst
-     * @param freq
-     * @param rfch
-     * @param powe
-     * @param modu
-     * @param datr
-     * @param codr
-     * @param ipol
-     * @param data
+     *
+     * @param imme if true data will be sent immediately
+     * @param tmst timestamp at which send data
+     * @param freq center frequency
+     * @param rfch antenna on which send data
+     * @param powe tx power in dB
+     * @param modu "LORA" or "FSK"
+     * @param datr data rate
+     * @param codr code rate
+     * @param ipol if true, invert polarity
+     * @param data frame to be sent
+     * @param ncrc if not false, disable crc
      * @return
      */
 
-    public static String getTxpk(boolean imme, long tmst, double freq, int rfch, int powe, String modu, String datr, String codr, boolean ipol, byte[] data, boolean ncrc) {
+    public static String getTxpk(
+            boolean imme, long tmst, double freq, int rfch, int powe, String modu, String datr, String codr, boolean ipol, byte[] data, boolean ncrc) {
         JSONObject txpk = new JSONObject();
 
         if (imme) {
@@ -124,7 +126,7 @@ public class GatewayMessage {
         JSONObject payload = new JSONObject();
         payload.put("txpk",txpk);
 
-        System.out.println(payload.toString());
+        //System.out.println(payload.toString());
         return payload.toString().trim();
     }
 

@@ -243,14 +243,16 @@ public class MACMessage {
 
     public boolean checkIntegrity(LoraMote mote) {
         byte[] calculatedMIC = this.computeMIC(mote);
-        System.out.printf("Received MIC: %s, Calculated MIC: %s", new String(Hex.encode(this.MIC)), new String(Hex.encode(calculatedMIC)));
         boolean validMIC = Arrays.equals(this.MIC,calculatedMIC);
 
+        /*
+        System.out.printf("Received MIC: %s, Calculated MIC: %s", new String(Hex.encode(this.MIC)), new String(Hex.encode(calculatedMIC)));
         if (validMIC) {
             System.out.println(" ==> VALID MIC");
         } else {
             System.out.println(" ==> NOT VALID MIC");
         }
+        */
 
         return validMIC;
     }
@@ -269,7 +271,7 @@ public class MACMessage {
         bb.put(this.payload);
         bb.put(this.MIC);
         byte[] res = bb.array();
-        System.out.println("PHY Payload: " + new String(Hex.encode(res)));
+        //System.out.println("PHY Payload: " + new String(Hex.encode(res)));
         return res;
     }
 

@@ -71,11 +71,11 @@ public class FrameMessage {
         } else if (devAddress.length < 4) {
             this.devAddress = new byte[4];
             System.arraycopy(devAddress,0,this.devAddress,0,devAddress.length);
-            System.err.printf("devAddress len is %d, Device Address set to %s", devAddress.length, Hex.encode(this.devAddress));
+            System.err.printf("devAddress len is %d, Device Address set to %s", devAddress.length, new String(Hex.encode(this.devAddress)));
         } else if (devAddress.length > 4) {
             this.devAddress = new byte[4];
             System.arraycopy(devAddress,0,this.devAddress,0,4);
-            System.err.printf("devAddress len is %d, Device Address set to %s", devAddress.length, Hex.encode(this.devAddress));
+            System.err.printf("devAddress len is %d, Device Address set to %s", devAddress.length, new String(Hex.encode(this.devAddress)));
         } else {
             this.devAddress = devAddress;
         }
@@ -86,14 +86,12 @@ public class FrameMessage {
         this.port = (byte) (port & 0xFF);
         this.payload = payload;
         this.dir = (byte) (dir & 0x1);
-
-        //System.out.println("Frame Payload: " + Arrays.toString(this.payload));
     }
 
 
     /**
      * Parse raw data
-     * @param macMessage
+     * @param macMessage Get the frame fields from a received Mac Message
      */
 
     public FrameMessage(MACMessage macMessage) {
@@ -103,7 +101,6 @@ public class FrameMessage {
         ByteBuffer bb = ByteBuffer.wrap(data).order(ByteOrder.LITTLE_ENDIAN);
         this.devAddress = Arrays.copyOfRange(data, 0, 4);
         this.control = bb.get(4);
-        //System.out.println("Control: " + String.format("%16s", Integer.toBinaryString(this.control)).replace(' ', '0'));
         this.counter = bb.getShort(5);
         this.optLen = control & 0xF;
 
@@ -150,7 +147,6 @@ public class FrameMessage {
         }
 
         byte[] A = bb.array();
-        //System.out.println(Arrays.toString(A));
         byte[] decrypted = new byte[payloadSize];
 
         try {
@@ -161,7 +157,6 @@ public class FrameMessage {
             // Create S
             cipher.init(Cipher.ENCRYPT_MODE, aesKey);
             byte[] S = cipher.doFinal(A);
-            //System.out.println("S: " +  Arrays.toString(S));
 
             // Encryption
             for (int i=0; i<payloadSize; i++) {

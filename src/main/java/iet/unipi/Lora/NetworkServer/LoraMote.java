@@ -9,8 +9,6 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.security.Key;
 import java.util.Arrays;
-import java.util.Queue;
-import java.util.concurrent.ConcurrentLinkedQueue;
 
 
 /**
@@ -18,12 +16,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
  */
 
 public class LoraMote {
-    public static final byte NET_SESSION_KEY_FLAG = 0x01;
-    public static final byte APP_SESSION_KEY_FLAG = 0x02;
-
-    private static byte[] pad16Array = {0,0,0,0,0,0,0};
-
-
+    // LoRa mote attributes
     public final byte[] devEUI;
     public final byte[] appEUI;
     public final byte[] devAddress;
@@ -32,9 +25,6 @@ public class LoraMote {
     public byte[] appSessionKey;
     public int frameCounterUp;
     public int frameCounterDown;
-
-    public final Queue<GatewayMessage> pullResp = new ConcurrentLinkedQueue<GatewayMessage>();
-
 
     /**
      * Standard constructor
@@ -100,17 +90,23 @@ public class LoraMote {
     }
 
 
-
-
+    /**
+     *
+     * @param flag
+     * @param appNonce
+     * @param netID
+     * @param devNonce
+     * @return
+     */
 
     private byte[] getSessionKey(byte flag, byte[] appNonce, byte[] netID, byte[] devNonce) {
-
         ByteBuffer bb = ByteBuffer.allocate(16).order(ByteOrder.LITTLE_ENDIAN);
-
         bb.put(flag);
         bb.put(appNonce);
         bb.put(netID);
         bb.put(devNonce);
+
+        byte[] pad16Array = {0,0,0,0,0,0,0};
         bb.put(pad16Array);
 
         byte[] encrypted = new byte[16];
@@ -131,9 +127,16 @@ public class LoraMote {
     }
 
 
+    /**
+     *
+     * @param devNonce
+     * @param appNonce
+     * @param netID
+     */
+
     public void createSessionKeys(byte[] devNonce, byte[] appNonce, byte[] netID) {
-        this.netSessionKey = getSessionKey(NET_SESSION_KEY_FLAG, appNonce, netID, devNonce);
-        this.appSessionKey = getSessionKey(APP_SESSION_KEY_FLAG, appNonce, netID, devNonce);
+        this.netSessionKey = getSessionKey((byte) 0x01, appNonce, netID, devNonce);
+        this.appSessionKey = getSessionKey((byte) 0x02, appNonce, netID, devNonce);
     }
 
 
@@ -168,7 +171,6 @@ public class LoraMote {
      */
 
     public static String formatEUI(byte[] eui) {
-        //String s = String.format("%016X",eui);
         StringBuilder sb = new StringBuilder(23);
 
         for (int i=0; i<8; i++) {
