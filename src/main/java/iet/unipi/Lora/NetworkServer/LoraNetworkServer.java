@@ -102,7 +102,7 @@ public class LoraNetworkServer implements Runnable {
 
                         // Send PUSH_ACK
                         GatewayMessage push_ack = new GatewayMessage(GatewayMessage.GWMP_V1, gm.token, GatewayMessage.PUSH_ACK, null, null);
-                        sock.send(push_ack.getDatagramPacket(packet.getAddress(), packet.getPort()));
+                        sock.send(push_ack.getDatagramPacket((InetSocketAddress) packet.getSocketAddress()));
 
                         // Handle PUSH_DATA
                         System.out.println(gm.payload);
@@ -165,7 +165,7 @@ public class LoraNetworkServer implements Runnable {
                                         InetSocketAddress gw = gateways.get(LoraMote.formatEUI(gm.gateway));
 
                                         // Send Join Accept
-                                        sock.send(gw_ja.getDatagramPacket(gw.getAddress(), gw.getPort()));
+                                        sock.send(gw_ja.getDatagramPacket(gw));
 
                                         // Create keys
                                         mote.createSessionKeys(jr.devNonce, ja.appNonce, ja.netID);
@@ -223,7 +223,7 @@ public class LoraNetworkServer implements Runnable {
                                                     mote
                                             );
 
-                                            String resp_str = GatewayMessage.getTxpk(
+                                            /*String resp_str = GatewayMessage.getTxpk(
                                                     false,
                                                     tmst + RECEIVE_DELAY1,
                                                     rxpk.getDouble("freq"),
@@ -232,6 +232,20 @@ public class LoraNetworkServer implements Runnable {
                                                     rxpk.getString("modu"),
                                                     rxpk.getString("datr"),
                                                     rxpk.getString("codr"),
+                                                    IPOL,
+                                                    mac_resp.getBytes(),
+                                                    NCRC
+                                            ); */
+
+                                            String resp_str = GatewayMessage.getTxpk(
+                                                    false,
+                                                    tmst + RECEIVE_DELAY2,
+                                                    869.525,
+                                                    RFCH,
+                                                    POWER,
+                                                    "LORA",
+                                                    "SF12BW125",
+                                                    "4/5",
                                                     IPOL,
                                                     mac_resp.getBytes(),
                                                     NCRC
@@ -246,7 +260,7 @@ public class LoraNetworkServer implements Runnable {
                                             );
 
                                             InetSocketAddress gw = gateways.get(LoraMote.formatEUI(gm.gateway));
-                                            sock.send(gw_resp.getDatagramPacket(gw.getAddress(), gw.getPort()));
+                                            sock.send(gw_resp.getDatagramPacket(gw));
                                             mote.frameCounterDown++;
                                         }
 
@@ -302,7 +316,7 @@ public class LoraNetworkServer implements Runnable {
 
                         // Send PULL_ACK
                         GatewayMessage pull_ack = new GatewayMessage(gm.version, gm.token, GatewayMessage.PULL_ACK, gm.gateway, null);
-                        sock.send(pull_ack.getDatagramPacket(packet.getAddress(), packet.getPort()));
+                        sock.send(pull_ack.getDatagramPacket((InetSocketAddress) packet.getSocketAddress()));
 
                         break;
                     }

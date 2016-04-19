@@ -4,6 +4,7 @@ import org.json.*;
 
 import java.net.DatagramPacket;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
@@ -158,16 +159,14 @@ public class GatewayMessage {
         return Arrays.copyOfRange(bb.array(),0,msgLen);
     }
 
-
     /**
      * Build UDP packet from GWMP message
-     * @param address
-     * @param port
+     * @param gateway
      * @return
      */
 
-    public DatagramPacket getDatagramPacket(InetAddress address, int port) {
+    public DatagramPacket getDatagramPacket(InetSocketAddress gateway) {
         byte[] buff = this.getBytes();
-        return new DatagramPacket(buff, buff.length, address, port);
+        return new DatagramPacket(buff, buff.length, gateway.getAddress(), gateway.getPort());
     }
 }
