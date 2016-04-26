@@ -4,7 +4,10 @@ import org.bouncycastle.util.encoders.Hex;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.io.BufferedWriter;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
@@ -28,16 +31,14 @@ public class LoraNetworkServer implements Runnable {
 
     private static final byte FRAME_PORT = 3;
 
+    private static final boolean SEND_ACK = true;
+
     // Temporizing
     public static final long RECEIVE_DELAY1 = 1000000; // microsec
     public static final long RECEIVE_DELAY2 = RECEIVE_DELAY1 + 1000000; // microsec
     public static final long JOIN_ACCEPT_DELAY1 = 5000000;
     public static final long JOIN_ACCEPT_DELAY2 = JOIN_ACCEPT_DELAY1 + 1000000;
 
-
-    // Address and port of gateway for PULL_RESP
-    //private InetAddress pull_resp_addr;
-    //private int pull_resp_port;
 
     // List of all known motes - TODO: implement as HashMap
     private List<LoraMote> motes = new ArrayList<LoraMote>();
@@ -93,7 +94,7 @@ public class LoraNetworkServer implements Runnable {
                 // Receive UDP packet and create GWMP data structure
                 DatagramPacket packet = new DatagramPacket(new byte[BUFFER_LEN], BUFFER_LEN);
                 sock.receive(packet);
-                long receiveTime = System.currentTimeMillis();
+                long receiveTime = System.nanoTime();
                 GatewayMessage gm = new GatewayMessage(packet.getData());
 
                 switch (gm.type) {
@@ -109,6 +110,8 @@ public class LoraNetworkServer implements Runnable {
                         JSONObject jsonPayload = new JSONObject(gm.payload);
 
                         if (!jsonPayload.isNull("rxpk")) {
+
+
                             JSONArray rxpkArray = jsonPayload.getJSONArray("rxpk");
                             for (int i = 0; i < rxpkArray.length(); i++) {
                                 JSONObject rxpk = rxpkArray.getJSONObject(i);
@@ -292,13 +295,60 @@ public class LoraNetworkServer implements Runnable {
 
                                         // Decrypt payload
                                         byte[] decrypted = fm.getDecryptedPayload(mote.appSessionKey);
-                                        System.out.print("Payload: " + Arrays.toString(decrypted));
+                                        System.out.printf("Received payload (%d bytes): %s\n", decrypted.length,new String(Hex.encode(decrypted)));
 
+                                        if (SEND_ACK && gateways.containsKey(LoraMote.formatEUI(gm.gateway))) {
+                                            FrameMessage frame_resp = new FrameMessage(
+                                                    fm.devAddress,
+                                                    FrameMessage.ACK,
+                                                    (short) mote.frameCounterDown,
+                                                    null,
+                                                    FRAME_PORT,
+                                                    Hex.decode("0F"),
+                                                    FrameMessage.DOWNSTREAM
+                                            );
+
+                                            MACMessage mac_resp = new MACMessage(
+                                                    MACMessage.UNCONFIRMED_DATA_DOWN,
+                                                    frame_resp,
+                                                    mote
+                                            );
+
+                                            String resp_str = GatewayMessage.getTxpk(
+                                                    false,
+                                                    tmst + RECEIVE_DELAY1,
+                                                    rxpk.getDouble("freq"),
+                                                    RFCH,
+                                                    POWER,
+                                                    rxpk.getString("modu"),
+                                                    rxpk.getString("datr"),
+                                                    rxpk.getString("codr"),
+                                                    IPOL,
+                                                    mac_resp.getBytes(),
+                                                    NCRC
+                                            );
+
+                                            GatewayMessage gw_resp = new GatewayMessage(
+                                                    GatewayMessage.GWMP_V1,
+                                                    (short) 0,
+                                                    GatewayMessage.PULL_RESP,
+                                                    null,
+                                                    resp_str
+                                            );
+
+                                            InetSocketAddress gw = gateways.get(LoraMote.formatEUI(gm.gateway));
+                                            sock.send(gw_resp.getDatagramPacket(gw));
+                                            mote.frameCounterDown++;
+                                        }
                                         break;
                                     }
                                     default:
                                         System.out.println("Unknown MAC message type: " + Integer.toBinaryString(mm.type));
                                 }
+                            }
+
+                            try (BufferedWriter out = new BufferedWriter(new FileWriter("data/log.txt",true))) {
+                                out.append(gm.payload + "\n");
                             }
                         }
 
@@ -328,8 +378,8 @@ public class LoraNetworkServer implements Runnable {
                     default:
                         System.out.println("Unknown GWMP message type received from: " + packet.getAddress().getHostAddress() + ", Gateway: " + LoraMote.formatEUI(gm.gateway));
                 }
-                double elapsedTime = ((double) (System.currentTimeMillis() - receiveTime)) / 1000;
-                System.out.println(String.format("Elapsed time %f sec", elapsedTime));
+                double elapsedTime = ((double) (System.nanoTime() - receiveTime)) / 1000000;
+                System.out.println(String.format("Elapsed time %f ms", elapsedTime));
             }
 
         } catch (IOException e) {
