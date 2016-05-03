@@ -38,8 +38,8 @@ public class JoinRequest {
         byte[] dev_nonce = Arrays.copyOf(this.devNonce, this.devNonce.length);
         ArrayUtils.reverse(dev_nonce);
 
-        System.out.println("App EUI: " + LoraMote.formatEUI(app_eui));
-        System.out.println("Dev EUI: " + LoraMote.formatEUI(dev_eui));
+        System.out.println("App EUI: " + Util.formatEUI(app_eui));
+        System.out.println("Dev EUI: " + Util.formatEUI(dev_eui));
         System.out.println("Dev Nonce: " + new String(Hex.encode(dev_nonce)) + "\n");
     }
 }

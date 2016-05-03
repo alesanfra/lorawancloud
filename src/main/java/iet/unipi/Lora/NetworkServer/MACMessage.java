@@ -39,6 +39,7 @@ public class MACMessage {
 
     // Constants
     public static final int B0_LEN = 16;
+    private static final int MIN_LORAWAN_PAYLOAD = 12;
 
     // MAC Messge fields
     public final int type;
@@ -56,6 +57,10 @@ public class MACMessage {
     public MACMessage(String physicalPayload) {
         byte[] data = Base64.getDecoder().decode(physicalPayload.getBytes());
         //System.out.println("PHY Payload: " + Arrays.toString(data));
+
+        if (data.length < MIN_LORAWAN_PAYLOAD) {
+            System.err.println("NOT LoRaWAN message");
+        }
 
         // Parsing Header
         this.type = (data[0] & 0xE0) >> 5;

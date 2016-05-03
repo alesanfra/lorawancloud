@@ -82,11 +82,12 @@ public class LoraMote {
 
     /**
      * Convenience constructor
+     * @param devEUI
      * @param devAddress
      */
 
-    public LoraMote(byte[] devAddress) {
-        this(null,null,devAddress,null,null,null);
+    public LoraMote(byte[] devEUI, byte[] devAddress) {
+        this(devEUI,null,devAddress,null,null,null);
     }
 
 
@@ -148,7 +149,7 @@ public class LoraMote {
     public String getDevEUI() {
         byte[] dev_eui = Arrays.copyOf(this.devEUI,this.devEUI.length);
         ArrayUtils.reverse(dev_eui);
-        return formatEUI(dev_eui);
+        return Util.formatEUI(dev_eui);
     }
 
 
@@ -160,27 +161,11 @@ public class LoraMote {
     public String getAppEUI() {
         byte[] app_eui = Arrays.copyOf(this.appEUI,this.appEUI.length);
         ArrayUtils.reverse(app_eui);
-        return formatEUI(this.appEUI);
+        return Util.formatEUI(this.appEUI);
     }
 
 
-    /**
-     * Format EUI in a readble way
-     * @param eui EUI expressed as a number
-     * @return EUI String like AA:BB:CC:DD:EE:FF:GG:HH
-     */
 
-    public static String formatEUI(byte[] eui) {
-        StringBuilder sb = new StringBuilder(23);
-
-        for (int i=0; i<8; i++) {
-            if (sb.length() > 0) {
-                sb.append(':');
-            }
-            sb.append(String.format("%02X",eui[i]));
-        }
-        return sb.toString().toUpperCase();
-    }
 
 
     /**
@@ -210,6 +195,13 @@ public class LoraMote {
             return false;
         }
         LoraMote other = (LoraMote) o;
-        return Arrays.equals(this.devAddress,other.devAddress);
+
+        if (this.devAddress != null && other.devAddress != null) {
+            return Arrays.equals(this.devAddress,other.devAddress);
+        } else if (this.devEUI != null && other.devEUI != null) {
+            return Arrays.equals(this.devEUI,other.devEUI);
+        }
+
+        return false;
     }
 }
