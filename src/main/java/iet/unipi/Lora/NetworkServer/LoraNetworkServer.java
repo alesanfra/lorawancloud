@@ -4,6 +4,8 @@ import org.bouncycastle.util.encoders.Hex;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.io.BufferedWriter;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
@@ -11,10 +13,7 @@ import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.*;
-import java.util.logging.FileHandler;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-import java.util.logging.SimpleFormatter;
+import java.util.logging.*;
 
 
 /**
@@ -57,6 +56,7 @@ public class LoraNetworkServer implements Runnable {
 
     // Log
     private final static Logger log = Logger.getLogger(LoraNetworkServer.class.getName());
+    private static final String LOG_FILE = "data/received.txt";
 
     // List of all known motes
     private List<LoraMote> motes = new ArrayList<>();
@@ -77,13 +77,13 @@ public class LoraNetworkServer implements Runnable {
             sock = new DatagramSocket(UDP_PORT);
             System.out.println("Listening to: " + sock.getLocalAddress().getHostAddress() + " : " + sock.getLocalPort());
 
-
+/*
+            log.setUseParentHandlers(false);
             log.setLevel(Level.INFO);
             FileHandler fileTxt = new FileHandler("Logging.txt");
-            fileTxt.setFormatter(new SimpleFormatter());
+            fileTxt.setFormatter(new LogFormatter());
             log.addHandler(fileTxt);
-
-
+*/
             // Add one mote (ABP join)
             motes.add(new LoraMote(
                     "A1B2C3D400000000",
@@ -182,13 +182,12 @@ public class LoraNetworkServer implements Runnable {
                                         System.out.println("Unknown MAC message type: " + Integer.toBinaryString(mm.type));
                                 }
                             }
-/*
-                            // Scrivo il Log
-                            try (BufferedWriter out = new BufferedWriter(new FileWriter("data/log.txt",true))) {
-                                out.append(gm.payload).append("\n");
+
+                            try (BufferedWriter log = new BufferedWriter(new FileWriter(LOG_FILE, true))) {
+                                log.append(gm.payload).append("\n"); // Scrivo il Log
                             }
-*/
-                            log.info(gm.payload);
+
+                            //log.info(gm.payload);
                         }
 
                         break;
