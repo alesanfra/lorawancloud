@@ -1,17 +1,14 @@
 package iet.unipi.Lora.NetworkServer;
 
-import org.json.*;
+import org.json.JSONObject;
 
 import java.net.DatagramPacket;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Base64;
-import java.util.LinkedHashMap;
-import java.util.Map;
 
 
 /**

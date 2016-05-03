@@ -56,7 +56,6 @@ public class MACMessage {
 
     public MACMessage(String physicalPayload) {
         byte[] data = Base64.getDecoder().decode(physicalPayload.getBytes());
-        //System.out.println("PHY Payload: " + Arrays.toString(data));
 
         if (data.length < MIN_LORAWAN_PAYLOAD) {
             System.err.println("NOT LoRaWAN message");
@@ -145,8 +144,6 @@ public class MACMessage {
 
         // Calculate MIC
         this.MIC = this.computeMIC(mote);
-
-        //System.out.println("MAC Payload: " + Arrays.toString(this.payload));
     }
 
 
@@ -202,7 +199,6 @@ public class MACMessage {
         bb.put(mac_header);
         bb.put(this.payload);
         byte[] stream = bb.array();
-        //System.out.println("Stream input: " + Arrays.toString(stream));
 
         // Calculate CMAC
         byte[] cmac = new byte[16];
@@ -247,19 +243,7 @@ public class MACMessage {
      */
 
     public boolean checkIntegrity(LoraMote mote) {
-        byte[] calculatedMIC = this.computeMIC(mote);
-        boolean validMIC = Arrays.equals(this.MIC,calculatedMIC);
-
-        /*
-        System.out.printf("Received MIC: %s, Calculated MIC: %s", new String(Hex.encode(this.MIC)), new String(Hex.encode(calculatedMIC)));
-        if (validMIC) {
-            System.out.println(" ==> VALID MIC");
-        } else {
-            System.out.println(" ==> NOT VALID MIC");
-        }
-        */
-
-        return validMIC;
+        return Arrays.equals(this.MIC, this.computeMIC(mote));
     }
 
 
@@ -276,7 +260,6 @@ public class MACMessage {
         bb.put(this.payload);
         bb.put(this.MIC);
         byte[] res = bb.array();
-        //System.out.println("PHY Payload: " + new String(Hex.encode(res)));
         return res;
     }
 
@@ -305,8 +288,6 @@ public class MACMessage {
 
         byte mac_header = (byte) ((this.type << 5) + this.lorawanVersion);
         byte[] res = ArrayUtils.add(encrypted,0,mac_header);
-
-        //System.out.println("PHY Payload: " + Arrays.toString(res));
         return res;
     }
 }

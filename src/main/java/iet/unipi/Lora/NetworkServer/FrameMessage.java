@@ -2,18 +2,12 @@ package iet.unipi.Lora.NetworkServer;
 
 import org.apache.commons.lang.ArrayUtils;
 import org.bouncycastle.util.encoders.Hex;
-import org.jetbrains.annotations.NotNull;
 
-import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
-import javax.crypto.IllegalBlockSizeException;
-import javax.crypto.NoSuchPaddingException;
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.security.InvalidKeyException;
 import java.security.Key;
-import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 
 /**
@@ -199,7 +193,6 @@ public class FrameMessage {
      * @return byte array to be put in frame option field
      */
 
-    @NotNull
     public static byte[] getRXParamSetupReq(int RX1DRoffset, int RX2DataRate, int frequency) {
         byte DLsettings = (byte) (((RX1DRoffset & 0x7) << 4) + (RX2DataRate & 0xF));
         ByteBuffer bb = ByteBuffer.allocate(5).order(ByteOrder.LITTLE_ENDIAN);

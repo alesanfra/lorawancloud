@@ -4,8 +4,6 @@ import org.bouncycastle.util.encoders.Hex;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-import java.io.BufferedWriter;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
@@ -13,6 +11,10 @@ import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.*;
+import java.util.logging.FileHandler;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import java.util.logging.SimpleFormatter;
 
 
 /**
@@ -53,6 +55,8 @@ public class LoraNetworkServer implements Runnable {
     public static final long JOIN_ACCEPT_DELAY2 = JOIN_ACCEPT_DELAY1 + 1000000;
 
 
+    // Log
+    private final static Logger log = Logger.getLogger(LoraNetworkServer.class.getName());
 
     // List of all known motes
     private List<LoraMote> motes = new ArrayList<>();
@@ -72,6 +76,13 @@ public class LoraNetworkServer implements Runnable {
         try {
             sock = new DatagramSocket(UDP_PORT);
             System.out.println("Listening to: " + sock.getLocalAddress().getHostAddress() + " : " + sock.getLocalPort());
+
+
+            log.setLevel(Level.INFO);
+            FileHandler fileTxt = new FileHandler("Logging.txt");
+            fileTxt.setFormatter(new SimpleFormatter());
+            log.addHandler(fileTxt);
+
 
             // Add one mote (ABP join)
             motes.add(new LoraMote(
@@ -171,11 +182,13 @@ public class LoraNetworkServer implements Runnable {
                                         System.out.println("Unknown MAC message type: " + Integer.toBinaryString(mm.type));
                                 }
                             }
-
+/*
                             // Scrivo il Log
                             try (BufferedWriter out = new BufferedWriter(new FileWriter("data/log.txt",true))) {
                                 out.append(gm.payload).append("\n");
                             }
+*/
+                            log.info(gm.payload);
                         }
 
                         break;
@@ -314,6 +327,15 @@ public class LoraNetworkServer implements Runnable {
 
         // Check MIC
         macMessage.checkIntegrity(mote);
+
+                /*
+        System.out.printf("Received MIC: %s, Calculated MIC: %s", new String(Hex.encode(this.MIC)), new String(Hex.encode(calculatedMIC)));
+        if (validMIC) {
+            System.out.println(" ==> VALID MIC");
+        } else {
+            System.out.println(" ==> NOT VALID MIC");
+        }
+        */
 
         if (fm.optLen > 0) {
             System.out.println("There are options in the packet");
