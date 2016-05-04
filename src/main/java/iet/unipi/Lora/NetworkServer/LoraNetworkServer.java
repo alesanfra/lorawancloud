@@ -431,6 +431,15 @@ public class LoraNetworkServer implements Runnable {
         float latitude = bb.getFloat();
         float longitude = bb.getFloat();
         System.out.printf("Coordinates: %f %f\n",latitude,longitude);
+
+        byte endTest = bb.get();
+        byte testNumber = bb.get();
+
+        if (endTest == 0x44) {
+            String end = String.format("End test: %d", testNumber);
+            System.out.println(end);
+            log.info(end);
+        }
         return;
     }
 
