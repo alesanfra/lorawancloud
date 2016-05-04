@@ -74,16 +74,10 @@ public class LoraNetworkServer implements Runnable {
 
     public void run() {
         try {
+            setupLog();
             sock = new DatagramSocket(UDP_PORT);
             System.out.println("Listening to: " + sock.getLocalAddress().getHostAddress() + " : " + sock.getLocalPort());
 
-/*
-            log.setUseParentHandlers(false);
-            log.setLevel(Level.INFO);
-            FileHandler fileTxt = new FileHandler("Logging.txt");
-            fileTxt.setFormatter(new LogFormatter());
-            log.addHandler(fileTxt);
-*/
             // Add one mote (ABP join)
             motes.add(new LoraMote(
                     "A1B2C3D400000000",
@@ -142,7 +136,10 @@ public class LoraNetworkServer implements Runnable {
 
                 switch (gm.type) {
                     case GatewayMessage.PUSH_DATA: {
-                        System.out.println("\nPUSH_DATA received from: " + packet.getAddress().getHostAddress() + ", Gateway: " + Util.formatEUI(gm.gateway));
+                        System.out.println(
+                                "\nPUSH_DATA received from: " + packet.getAddress().getHostAddress()
+                                + ", Gateway: " + Util.formatEUI(gm.gateway)
+                        );
 
                         // Send PUSH_ACK
                         GatewayMessage push_ack = new GatewayMessage(GatewayMessage.GWMP_V1, gm.token, GatewayMessage.PUSH_ACK, null, null);
@@ -153,6 +150,7 @@ public class LoraNetworkServer implements Runnable {
                         JSONObject jsonPayload = new JSONObject(gm.payload);
 
                         if (!jsonPayload.isNull("rxpk")) {
+
                             JSONArray rxpkArray = jsonPayload.getJSONArray("rxpk");
                             for (int i = 0; i < rxpkArray.length(); i++) {
                                 JSONObject rxpk = rxpkArray.getJSONObject(i);
@@ -182,12 +180,7 @@ public class LoraNetworkServer implements Runnable {
                                         System.out.println("Unknown MAC message type: " + Integer.toBinaryString(mm.type));
                                 }
                             }
-
-                            try (BufferedWriter log = new BufferedWriter(new FileWriter(LOG_FILE, true))) {
-                                log.append(gm.payload).append("\n"); // Scrivo il Log
-                            }
-
-                            //log.info(gm.payload);
+                            log.info(gm.payload);
                         }
 
                         break;
@@ -219,6 +212,20 @@ public class LoraNetworkServer implements Runnable {
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+
+    /**
+     * Init logger
+     * @throws IOException
+     */
+
+    private void setupLog() throws IOException {
+        log.setUseParentHandlers(false);
+        log.setLevel(Level.INFO);
+        FileHandler fileTxt = new FileHandler(LOG_FILE, true);
+        fileTxt.setFormatter(new LogFormatter());
+        log.addHandler(fileTxt);
     }
 
 
@@ -325,7 +332,7 @@ public class LoraNetworkServer implements Runnable {
         mote.frameCounterUp = fm.counter;
 
         // Check MIC
-        macMessage.checkIntegrity(mote);
+        boolean micValid = macMessage.checkIntegrity(mote);
 
                 /*
         System.out.printf("Received MIC: %s, Calculated MIC: %s", new String(Hex.encode(this.MIC)), new String(Hex.encode(calculatedMIC)));
@@ -337,8 +344,7 @@ public class LoraNetworkServer implements Runnable {
         */
 
         if (fm.optLen > 0) {
-            System.out.println("There are options in the packet");
-            System.out.println(Arrays.toString(fm.options));
+            System.out.println("There are options in the packet: " + new String(Hex.decode(fm.options)));
         }
 
         // Decrypt payload
