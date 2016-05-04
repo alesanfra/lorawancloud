@@ -10,9 +10,11 @@ import java.util.logging.LogRecord;
  */
 public class SimpleDateFormatter extends Formatter {
 
+    private static final int BUFFER_LEN = 300;
+
     @Override
     public String format(LogRecord record) {
-        StringBuilder builder = new StringBuilder();
+        StringBuilder builder = new StringBuilder(BUFFER_LEN);
         builder.append(calcDate(record.getMillis()));
         builder.append(record.getMessage());
         builder.append("\n");
