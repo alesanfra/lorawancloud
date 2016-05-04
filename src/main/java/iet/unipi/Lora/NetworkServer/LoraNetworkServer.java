@@ -4,8 +4,6 @@ import org.bouncycastle.util.encoders.Hex;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-import java.io.BufferedWriter;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
@@ -55,8 +53,11 @@ public class LoraNetworkServer implements Runnable {
 
 
     // Log
-    private final static Logger log = Logger.getLogger(LoraNetworkServer.class.getName());
+    private final static Logger logPackets = Logger.getLogger("Lora Network Server: received packets");
     private static final String LOG_FILE = "data/received.txt";
+
+    private final static Logger activity = Logger.getLogger("Lora Network Server: activity");
+    private static final String ACTIVITY_FILE = "data/activity.txt";
 
     // List of all known motes
     private List<LoraMote> motes = new ArrayList<>();
@@ -74,11 +75,30 @@ public class LoraNetworkServer implements Runnable {
 
     public void run() {
         try {
-            setupLog();
-            sock = new DatagramSocket(UDP_PORT);
-            System.out.println("Listening to: " + sock.getLocalAddress().getHostAddress() + " : " + sock.getLocalPort());
+            // Init logger for received packets
+            logPackets.setUseParentHandlers(false);
+            logPackets.setLevel(Level.INFO);
+            FileHandler logPacketsFile = new FileHandler(LOG_FILE, true);
+            logPacketsFile.setFormatter(new LogFormatter());
+            logPackets.addHandler(logPacketsFile);
 
-            // Add one mote (ABP join)
+            // Init logger for server activity
+            activity.setLevel(Level.INFO);
+            FileHandler activityFile = new FileHandler(ACTIVITY_FILE, true);
+            activityFile.setFormatter(new SimpleDateFormatter());
+            activity.addHandler(activityFile);
+
+            // Change ConsoleHandler behavior
+            for (Handler handler: Logger.getLogger("").getHandlers()) {
+                if (handler instanceof ConsoleHandler) {
+                    handler.setFormatter(new SimpleDateFormatter());
+                }
+            }
+
+            sock = new DatagramSocket(UDP_PORT);
+            activity.info("Listening to: " + sock.getLocalAddress().getHostAddress() + " : " + sock.getLocalPort());
+
+            // Add motes
             motes.add(new LoraMote(
                     "A1B2C3D400000000",
                     "1112131415161718",
@@ -87,7 +107,6 @@ public class LoraNetworkServer implements Runnable {
                     "01020304050607080910111213141516",
                     "000102030405060708090A0B0C0D0E0F"
             ));
-
 
             motes.add(new LoraMote(
                     "A1B2C3D400000001",
@@ -136,8 +155,8 @@ public class LoraNetworkServer implements Runnable {
 
                 switch (gm.type) {
                     case GatewayMessage.PUSH_DATA: {
-                        System.out.println(
-                                "\nPUSH_DATA received from: " + packet.getAddress().getHostAddress()
+                        activity.info(
+                                "PUSH_DATA received from: " + packet.getAddress().getHostAddress()
                                 + ", Gateway: " + Util.formatEUI(gm.gateway)
                         );
 
@@ -146,7 +165,7 @@ public class LoraNetworkServer implements Runnable {
                         sock.send(push_ack.getDatagramPacket((InetSocketAddress) packet.getSocketAddress()));
 
                         // Handle PUSH_DATA
-                        System.out.println(gm.payload);
+                        activity.info(gm.payload);
                         JSONObject jsonPayload = new JSONObject(gm.payload);
 
                         if (!jsonPayload.isNull("rxpk")) {
@@ -156,7 +175,7 @@ public class LoraNetworkServer implements Runnable {
                                 JSONObject rxpk = rxpkArray.getJSONObject(i);
 
                                 if (rxpk.getInt("stat") != 1) {
-                                    System.out.println("CRC not valid, skip packet");
+                                    activity.warning("CRC not valid, skip packet");
                                     continue;
                                 }
 
@@ -177,17 +196,17 @@ public class LoraNetworkServer implements Runnable {
                                         break;
 
                                     default:
-                                        System.out.println("Unknown MAC message type: " + Integer.toBinaryString(mm.type));
+                                        activity.warning("Unknown MAC message type: " + Integer.toBinaryString(mm.type));
                                 }
                             }
-                            log.info(gm.payload);
+                            logPackets.info(gm.payload);
                         }
 
                         break;
                     }
                     case GatewayMessage.PULL_DATA: {
                         String gateway = Util.formatEUI(gm.gateway);
-                        System.out.println("\nPULL_DATA received from: " + packet.getAddress().getHostAddress() + ", Gateway: " + gateway);
+                        activity.info("PULL_DATA received from: " + packet.getAddress().getHostAddress() + ", Gateway: " + gateway);
 
                         // Send PULL_ACK
                         GatewayMessage pull_ack = new GatewayMessage(gm.version, gm.token, GatewayMessage.PULL_ACK, gm.gateway, null);
@@ -198,34 +217,19 @@ public class LoraNetworkServer implements Runnable {
                         break;
                     }
                     case GatewayMessage.TX_ACK: {
-                        System.out.println("\nTX_ACK received from: " + packet.getAddress().getHostAddress() + ", Gateway: " + Util.formatEUI(gm.gateway));
-                        System.out.println(gm.payload);
+                        activity.info("TX_ACK received from: " + packet.getAddress().getHostAddress() + ", Gateway: " + Util.formatEUI(gm.gateway));
                         break;
                     }
                     default:
-                        System.out.println("Unknown GWMP message type received from: " + packet.getAddress().getHostAddress() + ", Gateway: " + Util.formatEUI(gm.gateway));
+                        activity.warning("Unknown GWMP message type received from: " + packet.getAddress().getHostAddress() + ", Gateway: " + Util.formatEUI(gm.gateway));
                 }
                 double elapsedTime = ((double) (System.nanoTime() - receiveTime)) / 1000000;
-                System.out.println(String.format("Elapsed time %f ms", elapsedTime));
+                activity.info(String.format("Elapsed time %f ms\n", elapsedTime));
             }
 
         } catch (IOException e) {
             e.printStackTrace();
         }
-    }
-
-
-    /**
-     * Init logger
-     * @throws IOException
-     */
-
-    private void setupLog() throws IOException {
-        log.setUseParentHandlers(false);
-        log.setLevel(Level.INFO);
-        FileHandler fileTxt = new FileHandler(LOG_FILE, true);
-        fileTxt.setFormatter(new LogFormatter());
-        log.addHandler(fileTxt);
     }
 
 
@@ -239,14 +243,14 @@ public class LoraNetworkServer implements Runnable {
      */
 
     private void handleJoin(JSONObject rxpk, MACMessage macMessage, String gateway, long timestamp) throws IOException {
-        System.out.println("JOIN_REQUEST received");
+        activity.info("JOIN_REQUEST received");
         JoinRequest jr = new JoinRequest(macMessage);
         jr.print();
 
         // Find mote into Network Server list
         int index = motes.indexOf(new LoraMote(jr.devEUI,null));
         if (index < 0) {
-            System.err.println("Join OTA: mote not found into list");
+            activity.warning("Join OTA: mote not found into list");
             return;
         }
         LoraMote mote = motes.get(index);
@@ -280,7 +284,7 @@ public class LoraNetworkServer implements Runnable {
         );
 
         if (!gateways.containsKey(gateway)) {
-            System.err.println("Gateway PULL_RESP address not found");
+            activity.severe("Gateway PULL_RESP address not found");
             return;
         }
 
@@ -311,19 +315,19 @@ public class LoraNetworkServer implements Runnable {
         FrameMessage fm = new FrameMessage(macMessage);
         String type = (macMessage.type == MACMessage.CONFIRMED_DATA_UP) ? "CONFIRMED_DATA_UP" : "UNCONFIRMED_DATA_UP";
 
-        System.out.printf(
-                "%s received from address: %s \tport: %d \tframe counter: %d \tack flag: %d\n",
+        activity.info( String.format(
+                "%s received from address: %s \tport: %d \tframe counter: %d \tack flag: %d",
                 type,
                 fm.getDevAddress(),
                 fm.port,
                 fm.counter,
                 fm.getAck()
-        );
+        ));
 
         // Find mote into Network Server list
         int index = motes.indexOf(new LoraMote(null, fm.devAddress));
         if (index < 0) {
-            System.err.println("Mote not found into list");
+            activity.warning("Mote not found into list");
             return;
         }
         LoraMote mote = motes.get(index);
@@ -334,22 +338,17 @@ public class LoraNetworkServer implements Runnable {
         // Check MIC
         boolean micValid = macMessage.checkIntegrity(mote);
 
-                /*
-        System.out.printf("Received MIC: %s, Calculated MIC: %s", new String(Hex.encode(this.MIC)), new String(Hex.encode(calculatedMIC)));
-        if (validMIC) {
-            System.out.println(" ==> VALID MIC");
-        } else {
-            System.out.println(" ==> NOT VALID MIC");
+        if (!micValid) {
+            activity.warning("NOT VALID MIC");
         }
-        */
 
         if (fm.optLen > 0) {
-            System.out.println("There are options in the packet: " + new String(Hex.decode(fm.options)));
+            activity.info("There are options in the packet: " + new String(Hex.decode(fm.options)));
         }
 
         // Decrypt payload
         byte[] decrypted = fm.getDecryptedPayload(mote.appSessionKey);
-        System.out.printf("Received payload (%d bytes): %s\n", decrypted.length, new String(Hex.encode(decrypted)));
+        activity.info(String.format("Received payload (%d bytes): %s", decrypted.length, new String(Hex.encode(decrypted))));
         printCoordinates(decrypted);
 
         // Send ack if needed
@@ -424,22 +423,14 @@ public class LoraNetworkServer implements Runnable {
 
     private void printCoordinates(byte[] decrypted) {
         if (decrypted.length < 8) {
+            activity.warning("INVALID coordinates: length < 8 bytes");
             return;
         }
 
         ByteBuffer bb = ByteBuffer.wrap(decrypted).order(ByteOrder.LITTLE_ENDIAN);
         float latitude = bb.getFloat();
         float longitude = bb.getFloat();
-        System.out.printf("Coordinates: %f %f\n",latitude,longitude);
-
-        byte endTest = bb.get();
-        byte testNumber = bb.get();
-
-        if (endTest == 0x44) {
-            String end = String.format("End test: %d", testNumber);
-            System.out.println(end);
-            log.info(end);
-        }
+        activity.info(String.format("Coordinates: %f %f",latitude,longitude));
         return;
     }
 
