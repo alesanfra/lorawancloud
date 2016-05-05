@@ -13,7 +13,7 @@ public class Util {
     public static String formatEUI(byte[] eui) {
         StringBuilder sb = new StringBuilder(23);
 
-        for (int i=0; i<8; i++) {
+        for (int i=0; i<8 && i<eui.length; i++) {
             if (sb.length() > 0) {
                 sb.append(':');
             }

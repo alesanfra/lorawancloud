@@ -21,11 +21,12 @@ public class JoinRequest {
     public final byte[] devNonce = new byte[DEV_NONCE_LENGTH];
 
     public JoinRequest(MACMessage macMessage) {
-
-        ByteBuffer bb = ByteBuffer.wrap(macMessage.payload).order(ByteOrder.LITTLE_ENDIAN);
-        bb.get(this.appEUI, 0, EUI_LENGTH);
-        bb.get(this.devEUI, 0, EUI_LENGTH);
-        bb.get(this.devNonce, 0, DEV_NONCE_LENGTH);
+        if (macMessage.payload.length >= ((2*EUI_LENGTH) + DEV_NONCE_LENGTH)) {
+            ByteBuffer bb = ByteBuffer.wrap(macMessage.payload).order(ByteOrder.LITTLE_ENDIAN);
+            bb.get(this.appEUI, 0, EUI_LENGTH);
+            bb.get(this.devEUI, 0, EUI_LENGTH);
+            bb.get(this.devNonce, 0, DEV_NONCE_LENGTH);
+        }
     }
 
     public void print() {

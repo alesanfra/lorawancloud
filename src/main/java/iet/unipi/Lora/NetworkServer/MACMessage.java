@@ -59,18 +59,24 @@ public class MACMessage {
 
         if (data.length < MIN_LORAWAN_PAYLOAD) {
             System.err.println("NOT LoRaWAN message");
+            this.type = UNCONFIRMED_DATA_UP;
+            this.lorawanVersion = LORAWAN_1;
+            this.payload = new byte[MIN_LORAWAN_PAYLOAD];
+            this.MIC = new byte[4];
+        } else {
+
+            // Parsing Header
+            this.type = (data[0] & 0xE0) >> 5;
+            this.lorawanVersion = data[0] & 0x3;
+
+            // Parsing Payload
+            this.payload = Arrays.copyOfRange(data, 1, data.length - 4);
+            //System.out.println("MAC Payload: " + Arrays.toString(this.payload));
+
+
+            this.MIC = Arrays.copyOfRange(data, data.length - 4, data.length);
+
         }
-
-        // Parsing Header
-        this.type = (data[0] & 0xE0) >> 5;
-        this.lorawanVersion = data[0] & 0x3;
-
-        // Parsing Payload
-        this.payload = Arrays.copyOfRange(data, 1, data.length-4);
-        //System.out.println("MAC Payload: " + Arrays.toString(this.payload));
-
-
-        this.MIC = Arrays.copyOfRange(data,data.length-4,data.length);
 
         // Set dir
         byte direction = -1;

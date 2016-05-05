@@ -38,6 +38,7 @@ public class JoinAccept {
         this.CFList = new byte[0];
     }
 
+    /*
     public boolean addChannel() {
         if (this.CFList.length >= MAX_CHANNELS) {
             return false;
@@ -49,6 +50,7 @@ public class JoinAccept {
 
         return true;
     }
+    */
 
     public byte[] getChannels() {
         return this.CFList;
