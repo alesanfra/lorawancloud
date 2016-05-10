@@ -35,6 +35,8 @@ public class FrameMessage {
     public final byte[] payload;
     public final byte dir;
 
+    public MACMessage macMessage;
+
 
     /**
      * Build frame message from scratch
@@ -111,6 +113,7 @@ public class FrameMessage {
             this.port = 0;
             this.payload = null;
         }
+        this.macMessage = macMessage;
     }
 
 
