@@ -1,4 +1,4 @@
-package iet.unipi.Lora.NetworkServer;
+package iet.unipi.lorawan;
 
 /**
  * Created by alessio on 03/05/16.

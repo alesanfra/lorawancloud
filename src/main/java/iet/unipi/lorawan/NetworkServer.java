@@ -1,4 +1,4 @@
-package iet.unipi.Lora.NetworkServer;
+package iet.unipi.lorawan;
 
 import org.bouncycastle.util.encoders.Hex;
 import org.json.JSONArray;
@@ -15,10 +15,10 @@ import java.util.logging.*;
 
 
 /**
- * Main class of the Lora Network Server
+ * Main class of the lorawan Network Server
  */
 
-public class LoraNetworkServer implements Runnable {
+public class NetworkServer implements Runnable {
 
     /**
      * Network Server settings
@@ -441,7 +441,7 @@ public class LoraNetworkServer implements Runnable {
      */
 
     public static void main(String[] args) {
-        LoraNetworkServer networkServer = new LoraNetworkServer();
+        NetworkServer networkServer = new NetworkServer();
         networkServer.run();
     }
 }

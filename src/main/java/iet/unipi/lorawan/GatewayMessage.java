@@ -1,4 +1,4 @@
-package iet.unipi.Lora.NetworkServer;
+package iet.unipi.lorawan;
 
 import org.json.JSONObject;
 

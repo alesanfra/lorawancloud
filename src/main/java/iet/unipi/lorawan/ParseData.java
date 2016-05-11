@@ -1,4 +1,4 @@
-package iet.unipi.Lora.NetworkServer;
+package iet.unipi.lorawan;
 
 import org.json.JSONObject;
 
@@ -10,7 +10,7 @@ public class ParseData implements Runnable {
 
     private final int N_TEST = 9;
 
-    String[] test = {"250 m", "500 m LOS", "500 m NLOS", "1000 m", "1500 m", "2000 m", "2500 m rain", "2500 m", "3000 m"};
+    String[] test = {"250m", "500m L", "500m NL", "1000m", "1500m", "2000m", "2500m rain", "2500m", "3000m"};
 
     int[] lowerBound = {1, 249, 505, 721, 937, 1156, 1372, 1, 1};
     int[] upperBound = {216, 464, 720, 936, 1152, 1371, 1554, 216, 216};
@@ -35,6 +35,7 @@ public class ParseData implements Runnable {
         ) {
             String line;
             int iteration;
+            int crc_error = 0;
 
             read1: for (iteration=0; (line = in.readLine()) != null; iteration++) {
 
@@ -44,6 +45,11 @@ public class ParseData implements Runnable {
                 // Check CRC
                 if (rxpk.getInt("stat") != 1) {
                     // TODO: handle wrong crc packets
+
+                    if (rxpk.getInt("size") == 23) {
+                        crc_error++;
+                    }
+
                 } else {
                     FrameMessage frame = new FrameMessage(new MACMessage(rxpk.getString("data")));
                     System.out.printf("Iter: %d, Frame %d\n", iteration, frame.counter);
@@ -113,6 +119,8 @@ public class ParseData implements Runnable {
 
 
             System.out.println("Tutti i pacchetti sono stati parsati correttamente");
+            System.out.println("CRc sbagliato: " + crc_error);
+
 
             String[] drByTx = {"","",""};
 

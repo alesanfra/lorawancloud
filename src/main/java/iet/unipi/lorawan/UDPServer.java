@@ -1,4 +1,4 @@
-package iet.unipi.Lora.NetworkServer;
+package iet.unipi.lorawan;
 
 import java.io.IOException;
 import java.net.DatagramPacket;

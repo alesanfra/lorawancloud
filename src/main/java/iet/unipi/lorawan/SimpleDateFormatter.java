@@ -1,4 +1,4 @@
-package iet.unipi.Lora.NetworkServer;
+package iet.unipi.lorawan;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;

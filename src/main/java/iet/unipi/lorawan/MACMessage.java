@@ -1,15 +1,13 @@
-package iet.unipi.Lora.NetworkServer;
+package iet.unipi.lorawan;
 
 import org.apache.commons.lang.ArrayUtils;
 import org.bouncycastle.crypto.engines.AESEngine;
 import org.bouncycastle.crypto.macs.CMac;
 import org.bouncycastle.crypto.params.KeyParameter;
-import org.bouncycastle.util.encoders.Hex;
 
 
 import javax.crypto.Cipher;
 import javax.crypto.spec.SecretKeySpec;
-import java.lang.reflect.Array;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.security.Key;
