@@ -14,6 +14,7 @@ public class ParseData implements Runnable {
 
     int[] lowerBound = {1, 249, 505, 721, 937, 1156, 1372, 1, 1};
     int[] upperBound = {216, 464, 720, 936, 1152, 1371, 1554, 216, 216};
+    int[] metres = {250,500,1000,1005,1500,2000,2400,2500,3000};
 
     private List<JSONObject>[] lists = new List[N_TEST];
 
@@ -29,13 +30,16 @@ public class ParseData implements Runnable {
 
         try (
                 BufferedReader in = new BufferedReader(new FileReader("data/received.txt"));
-                PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter("data/results.csv")));
-                PrintWriter drOut = new PrintWriter(new BufferedWriter(new FileWriter("data/dr.csv")))
+                PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter("data/trasp.txt")))
 
         ) {
             String line;
             int iteration;
             int crc_error = 0;
+
+            /**
+             * CARICO TUTTO IN RAM
+             */
 
             read1: for (iteration=0; (line = in.readLine()) != null; iteration++) {
 
@@ -122,90 +126,87 @@ public class ParseData implements Runnable {
             System.out.println("CRc sbagliato: " + crc_error);
 
 
-            String[] drByTx = {"","",""};
+            /**
+             * PARSING DEI PACCHETTI
+             */
+
+            int test[][][][] = new int[6][9][3][4];
+
+            Map<String,Integer> dr = new HashMap<>();
+            dr.put("SF7BW125",5);
+            dr.put("SF8BW125",4);
+            dr.put("SF9BW125",3);
+            dr.put("SF10BW125",2);
+            dr.put("SF11BW125",1);
+            dr.put("SF12BW125",0);
+
+            Map<String,Integer> cr = new HashMap<>();
+            cr.put("4/5",0);
+            cr.put("4/6",1);
+            cr.put("4/7",2);
+            cr.put("4/8",3);
 
             // Scorro la lista e ottengo le statistiche
-            for (int i=0; i<lists.length; i++) {
-
-
-                int[] tx = {0,0,0};
-
-                Map<String,Integer> dr = new HashMap<>();
-                dr.put("SF7BW125",0);
-                dr.put("SF8BW125",0);
-                dr.put("SF9BW125",0);
-                dr.put("SF10BW125",0);
-                dr.put("SF11BW125",0);
-                dr.put("SF12BW125",0);
-
-                Map<String,Integer>[] drArray = new Map[3];
-                for (int j=0; j<drArray.length; j++) {
-                    drArray[j] = new HashMap<>();
-                    drArray[j].put("SF7BW125",0);
-                    drArray[j].put("SF8BW125",0);
-                    drArray[j].put("SF9BW125",0);
-                    drArray[j].put("SF10BW125",0);
-                    drArray[j].put("SF11BW125",0);
-                    drArray[j].put("SF12BW125",0);
-                }
-
-
-
-
-                Map<String,Integer> cr = new HashMap<>();
-                cr.put("4/5",0);
-                cr.put("4/6",0);
-                cr.put("4/7",0);
-                cr.put("4/8",0);
-
-
-                for (JSONObject json: lists[i]) {
+            for (int distance=0; distance<lists.length; distance++) {
+                // Conto i pacchetti
+                for (JSONObject json: lists[distance]) {
                     FrameMessage frame = new FrameMessage(new MACMessage(json.getString("data")));
 
-                    int tx_index = (frame.counter - lowerBound[i]) / 72;
-                    tx[tx_index]++; // conto la potenza di trasmissione
+                    int power = (frame.counter - lowerBound[distance]) / 72;
+                    int datr = dr.get(json.getString("datr"));
+                    int codr = cr.get(json.getString("codr"));
 
-                    String datr = json.getString("datr");
-                    int n = dr.get(datr);
-                    dr.put(datr,++n);
-
-                    n = drArray[tx_index].get(datr);
-                    drArray[tx_index].put(datr,++n);
-
-
-                    String codr = json.getString("codr");
-                    n = cr.get(codr);
-                    cr.put(codr,++n);
-
+                    test[datr][distance][power][codr]++;
                 }
-
-                System.out.printf("Test %s, pacchetti %d, 14dBm = %d, 8dBm = %d, 2dBm = %d\n",test[i],lists[i].size(),tx[0],tx[1],tx[2]);
-                System.out.printf("Data Rates: %s\n",dr.toString());
-
-                for (Map<String,Integer> map: drArray) {
-                    System.out.println(map.toString());
-                }
-
-                System.out.printf("Coding Rates: %s\n\n",cr.toString());
-
-                out.printf("%s\t%d\t%d\t%d\t%d",test[i],lists[i].size(),tx[2],tx[1],tx[0]); // save tx power
-                out.printf("\t%d\t%d\t%d\t%d\t%d\t%d",dr.get("SF7BW125"),dr.get("SF8BW125"),dr.get("SF9BW125"),dr.get("SF10BW125"),dr.get("SF11BW125"),dr.get("SF12BW125")); // save datr
-                out.printf("\t%d\t%d\t%d\t%d\n",cr.get("4/5"),cr.get("4/6"),cr.get("4/7"), cr.get("4/8") ); // save codr
-
-                for (int j=0; j<drArray.length; j++) {
-                    drByTx[j] += String.format("%d\t%d\t%d\t%d\t%d\t%d\n",drArray[j].get("SF7BW125"),drArray[j].get("SF8BW125"),drArray[j].get("SF9BW125"),drArray[j].get("SF10BW125"),drArray[j].get("SF11BW125"),drArray[j].get("SF12BW125"));
-                }
-
-
-            }
-
-            for (String s: drByTx) {
-                drOut.println(s);
             }
 
 
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
+            Map<Integer,String> pow = new HashMap<>();
+            pow.put(0,"14");
+            pow.put(1,"8");
+            pow.put(2,"2");
+
+            // 6 tabelle, una per ogni data rate
+            for (int[][][] table: test) {
+
+                // Per ogni data rate stampo una tabella
+                for (int distance=0; distance<table.length; distance++) {
+
+                    // Scarto 1000, 2500 con pioggia e 3000
+                    if (distance == 3 || distance == 6 || distance == 8) {
+                        continue;
+                    }
+
+                    out.printf("%d\t", metres[distance]);
+
+                    for (int power = 0; power<table[distance].length; power++) {
+
+                        for (int codr=0; codr<table[distance][power].length; codr++) {
+
+                            //out.printf("%s_4/%d\t", pow.get(power), codr+5);
+
+                            out.printf("%d\t",table[distance][power][codr]); // save tx power
+                        }
+
+
+                    }
+
+                    out.println();
+                }
+
+                out.println();
+            }
+
+/*
+
+            out.printf("\t%d\t%d\t%d\t%d\t%d\t%d",dr.get("SF7BW125"),dr.get("SF8BW125"),dr.get("SF9BW125"),dr.get("SF10BW125"),dr.get("SF11BW125"),dr.get("SF12BW125")); // save datr
+            out.printf("\t%d\t%d\t%d\t%d\n",cr.get("4/5"),cr.get("4/6"),cr.get("4/7"), cr.get("4/8") ); // save codr
+
+            for (int j=0; j<drArray.length; j++) {
+                drByTx[j] += String.format("%d\t%d\t%d\t%d\t%d\t%d\n",drArray[j].get("SF7BW125"),drArray[j].get("SF8BW125"),drArray[j].get("SF9BW125"),drArray[j].get("SF10BW125"),drArray[j].get("SF11BW125"),drArray[j].get("SF12BW125"));
+            }
+*/
+
         } catch (IOException e) {
             e.printStackTrace();
         }

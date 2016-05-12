@@ -20,13 +20,14 @@ public class ApplicationServerReceiver implements Runnable {
     private final OutputStreamWriter toCS;
 
 
-    private final String eui;
+    private final byte[] eui;
     private final Map<String,LoraMote> motes;
 
 
-    public ApplicationServerReceiver(Socket sockNS, Socket sockCS, String eui, Map<String,LoraMote> motes) {
-        this.motes = motes;
-        this.eui = eui;
+    public ApplicationServerReceiver(Application application) {
+        this.motes = application.motes;
+        this.eui = application.eui;
+
 
         this.sockNS = sockNS;
         OutputStream outputStream = null;
