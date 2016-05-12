@@ -162,7 +162,7 @@ public class GatewayMessage {
      * @return
      */
 
-    public DatagramPacket getDatagramPacket(InetSocketAddress gateway) {
+    public DatagramPacket getPacket(InetSocketAddress gateway) {
         byte[] buff = this.getBytes();
         return new DatagramPacket(buff, buff.length, gateway.getAddress(), gateway.getPort());
     }

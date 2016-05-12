@@ -63,7 +63,7 @@ public class NetworkServer implements Runnable {
     private List<LoraMote> motes = new ArrayList<>();
 
     // Map of all known gateways
-    private Map<String,InetSocketAddress> gateways = new HashMap<>(MAX_GATEWAYS);
+    private Map<String,InetSocketAddress> gateways = new HashMap<>();
 
     // Socket
     private DatagramSocket sock;
@@ -162,7 +162,7 @@ public class NetworkServer implements Runnable {
 
                         // Send PUSH_ACK
                         GatewayMessage push_ack = new GatewayMessage(GatewayMessage.GWMP_V1, gm.token, GatewayMessage.PUSH_ACK, null, null);
-                        sock.send(push_ack.getDatagramPacket((InetSocketAddress) packet.getSocketAddress()));
+                        sock.send(push_ack.getPacket((InetSocketAddress) packet.getSocketAddress()));
 
                         // Handle PUSH_DATA
                         activity.info(gm.payload);
@@ -210,7 +210,7 @@ public class NetworkServer implements Runnable {
 
                         // Send PULL_ACK
                         GatewayMessage pull_ack = new GatewayMessage(gm.version, gm.token, GatewayMessage.PULL_ACK, gm.gateway, null);
-                        sock.send(pull_ack.getDatagramPacket((InetSocketAddress) packet.getSocketAddress()));
+                        sock.send(pull_ack.getPacket((InetSocketAddress) packet.getSocketAddress()));
 
                         // Save UDP port
                         this.gateways.put(gateway, (InetSocketAddress) packet.getSocketAddress());
@@ -291,7 +291,7 @@ public class NetworkServer implements Runnable {
         InetSocketAddress gw = gateways.get(gateway);
 
         // Send Join Accept
-        sock.send(gw_ja.getDatagramPacket(gw));
+        sock.send(gw_ja.getPacket(gw));
 
         // Create keys
         mote.createSessionKeys(jr.devNonce, ja.appNonce, ja.netID);
@@ -410,7 +410,7 @@ public class NetworkServer implements Runnable {
             );
 
             InetSocketAddress gw = gateways.get(gateway);
-            sock.send(gw_resp.getDatagramPacket(gw));
+            sock.send(gw_resp.getPacket(gw));
             mote.frameCounterDown++;
         }
     }
