@@ -12,8 +12,8 @@ import java.util.Map;
 public class ApplicationServerReceiver implements Runnable {
 
     // Socket
-    private final Socket sockNS;
-    private final Socket sockCS;
+    private Socket sockNS;
+    private Socket sockCS;
 
     private final OutputStreamWriter toNS;
     private final InputStreamReader fromNS;
@@ -29,7 +29,7 @@ public class ApplicationServerReceiver implements Runnable {
         this.eui = application.eui;
 
 
-        this.sockNS = sockNS;
+        //this.sockNS = sockNS;
         OutputStream outputStream = null;
         try {
             outputStream = this.sockNS.getOutputStream();
@@ -48,7 +48,7 @@ public class ApplicationServerReceiver implements Runnable {
             fromNS = new InputStreamReader(inputStream);
         }
 
-        this.sockCS = sockCS;
+        //this.sockCS = sockCS;
         outputStream = null;
         try {
             outputStream = this.sockCS.getOutputStream();

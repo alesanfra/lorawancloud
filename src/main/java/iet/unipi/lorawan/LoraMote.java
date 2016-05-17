@@ -165,9 +165,6 @@ public class LoraMote {
     }
 
 
-
-
-
     /**
      * Get device address as string
      * @return
