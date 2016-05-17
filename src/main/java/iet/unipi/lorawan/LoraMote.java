@@ -5,6 +5,7 @@ import org.bouncycastle.util.encoders.Hex;
 
 import javax.crypto.Cipher;
 import javax.crypto.spec.SecretKeySpec;
+import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.security.Key;
@@ -149,7 +150,8 @@ public class LoraMote {
     public String getDevEUI() {
         byte[] dev_eui = Arrays.copyOf(this.devEUI,this.devEUI.length);
         ArrayUtils.reverse(dev_eui);
-        return Util.formatEUI(dev_eui);
+        return new String(Hex.encode(dev_eui));
+        //return Util.formatEUI(dev_eui);
     }
 
 
@@ -161,7 +163,8 @@ public class LoraMote {
     public String getAppEUI() {
         byte[] app_eui = Arrays.copyOf(this.appEUI,this.appEUI.length);
         ArrayUtils.reverse(app_eui);
-        return Util.formatEUI(this.appEUI);
+        return new String(Hex.encode(app_eui));
+        //return Util.formatEUI(this.appEUI);
     }
 
 
@@ -170,6 +173,13 @@ public class LoraMote {
      * @return
      */
 
+    public String getDevAddress() {
+        byte[] dev_addr = Arrays.copyOf(devAddress,devAddress.length);
+        ArrayUtils.reverse(dev_addr);
+        return new String(Hex.encode(dev_addr));
+    }
+
+    /*
     public String getDevAddress() {
         byte[] dev_addr = Arrays.copyOf(devAddress,devAddress.length);
         ArrayUtils.reverse(dev_addr);
@@ -184,6 +194,7 @@ public class LoraMote {
         }
         return sb.toString().toUpperCase();
     }
+    */
 
 
     @Override

@@ -11,9 +11,6 @@ import java.util.Map;
 
 public class ApplicationServerReceiver implements Runnable {
 
-    // Socket
-    private Socket sockNS;
-    private Socket sockCS;
 
     private final OutputStreamWriter toNS;
     private final InputStreamReader fromNS;

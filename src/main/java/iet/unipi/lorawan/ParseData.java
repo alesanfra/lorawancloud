@@ -133,12 +133,12 @@ public class ParseData implements Runnable {
             int test[][][][] = new int[6][9][3][4];
 
             Map<String,Integer> dr = new HashMap<>();
-            dr.put("SF7BW125",5);
-            dr.put("SF8BW125",4);
-            dr.put("SF9BW125",3);
-            dr.put("SF10BW125",2);
-            dr.put("SF11BW125",1);
-            dr.put("SF12BW125",0);
+            dr.put("SF7BW125",0);
+            dr.put("SF8BW125",1);
+            dr.put("SF9BW125",2);
+            dr.put("SF10BW125",3);
+            dr.put("SF11BW125",4);
+            dr.put("SF12BW125",5);
 
             Map<String,Integer> cr = new HashMap<>();
             cr.put("4/5",0);
