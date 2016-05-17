@@ -163,7 +163,7 @@ public class NetworkServerReceiver implements Runnable {
     }
 
     private String createMessage(GatewayMessage gm, MACMessage mm, FrameMessage fm) {
-
-        return new String();
+        // TODO: implement message
+        return gm.payload;
     }
 }

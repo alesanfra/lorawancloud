@@ -1,11 +1,15 @@
 package iet.unipi.lorawan;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
 import java.net.DatagramSocket;
 import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.net.SocketException;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.*;
 
 /**
@@ -22,8 +26,8 @@ public class NetworkServerSender implements Runnable {
     private final Map<String,InetSocketAddress> gateways;
     private final Socket sockAS;
 
-
-    private DatagramSocket toGateway;
+    private DatagramSocket sockGW;
+    private InputStreamReader fromAS;
 
     public NetworkServerSender(int port, Map<String,LoraMote> motes, Map<String,InetSocketAddress> gateways, Socket sockAS) {
         this.port = port;
@@ -31,10 +35,8 @@ public class NetworkServerSender implements Runnable {
         this.gateways = gateways;
         this.sockAS = sockAS;
 
-        /**
-         * Init Logger
-         */
 
+        // Init logger
         activity.setLevel(Level.INFO);
         FileHandler activityFile = null;
         try {
@@ -51,11 +53,40 @@ public class NetworkServerSender implements Runnable {
         } catch (IOException e) {
             e.printStackTrace();
         }
+
+        // Init reader
+        try {
+            fromAS = new InputStreamReader(sockAS.getInputStream(), StandardCharsets.US_ASCII);
+        } catch (IOException e) {
+            e.printStackTrace();
+            System.exit(-1);
+        }
+
+
+        // Init datagram socket
+        try {
+            sockGW = new DatagramSocket(port);
+            activity.info("Listening to: " + sockGW.getLocalAddress().getHostAddress() + " : " + sockGW.getLocalPort());
+        } catch (SocketException e) {
+            e.printStackTrace();
+            System.exit(-1);
+        }
     }
 
 
     @Override
     public void run() {
+
+        while (true) {
+            // Ricevo pacchetto dal AS
+
+
+            // Costrisco il frame
+
+
+            // Mando il frame al gateway
+        }
+
 
 
     }
