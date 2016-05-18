@@ -13,31 +13,20 @@ import java.util.logging.Logger;
 
 
 public class PacketAnalyzer extends Thread {
-
-    class LastTest {
-        private int test;
-        private int configuration;
-
-        public LastTest(int test, int configuration) {
-            this.test = test;
-            this.configuration = configuration;
-        }
-
-        public boolean is(int test, int configuration) {
-            return (test == this.test && configuration == this.configuration);
-        }
-    }
-
-
     private final BlockingQueue<Message> messages;
     private final Map<String, Map<Integer, Experiment>> test = new HashMap<>();
-    private final Map<String, LastTest> lastTest = new HashMap<>();
+    private final Map<String, Experiment> lastTest = new HashMap<>();
 
     // Log
     private final static Logger logPackets = Logger.getLogger("Packet analyzer: received packets");
     private static final String LOG_FILE = "data/received.txt";
     private final static Logger activity = Logger.getLogger("Packet analyzer: activity");
     private static final String ACTIVITY_FILE = "data/analyzer-activity.txt";
+
+    /**
+     *
+     * @param messages
+     */
 
     public PacketAnalyzer(BlockingQueue<Message> messages) {
         this.messages = messages;
@@ -66,22 +55,22 @@ public class PacketAnalyzer extends Thread {
     }
 
 
+    /**
+     *
+     */
+
     @Override
     public void run() {
-
-        int testNumber = -1;
 
         while (true) {
             try {
                 Message message = messages.take();
+                String devAddr = message.devAddress;
 
                 // Parse payload
-                FrameMessage fm = new FrameMessage(new MACMessage(message.jsonObject.getString("data")));
-
-
                 if (message.payload.length != 10) {
                     activity.warning("INVALID payload: length != 10 bytes");
-                    return;
+                    break;
                 }
 
                 ByteBuffer bb = ByteBuffer.wrap(message.payload).order(ByteOrder.LITTLE_ENDIAN);
@@ -91,20 +80,40 @@ public class PacketAnalyzer extends Thread {
                 float longitude = bb.getFloat();
 
 
-                Map<Integer, Experiment> moteExperiments = test.get(message.devAddress);
+                Map<Integer, Experiment> moteExperiments = test.get(devAddr);
 
-                // If new test, print result
+                // If new mote, init structures
                 if (moteExperiments == null) {
                     moteExperiments = new HashMap<>();
-                    test.put(message.devAddress, moteExperiments);
+                    test.put(devAddr, moteExperiments);
                 }
 
 
                 Experiment ex = moteExperiments.get(testN);
 
+                // If new test, init Experiment and print last
                 if (ex == null) {
-                    ex = new Experiment(message.devAddress,testN);
+                    ex = new Experiment(devAddr,testN);
                     moteExperiments.put((int) testN, ex);
+
+                    Experiment lastExperiment = lastTest.get(devAddr);
+                    if (lastExperiment != null) {
+                        if (lastExperiment.lastConfiguration >= 0) {
+                            activity.info(lastExperiment.printLastConfiguration());
+                        }
+
+                        activity.info(lastExperiment.print());
+                    }
+                    lastTest.put(devAddr, ex);
+                }
+
+                // check configuration, if new one print the old one
+                if (configuration != ex.lastConfiguration) {
+                    if (ex.lastConfiguration >= 0) {
+                        activity.info(ex.printLastConfiguration());
+                    }
+
+                    ex.lastConfiguration = configuration;
                 }
 
 
@@ -113,12 +122,8 @@ public class PacketAnalyzer extends Thread {
 
                 // Update average coordinates
                 ex.averageLat = (ex.averageLat*ex.received + latitude) / (ex.received+1);
-                ex.averageLong = (ex.averageLong*ex.received + latitude) / (ex.received+1);
+                ex.averageLong = (ex.averageLong*ex.received + longitude) / (ex.received+1);
                 ex.received++;
-
-                //
-
-
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }

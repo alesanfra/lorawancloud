@@ -13,7 +13,9 @@ public class Experiment {
     public final int[] packets = new int[MAX_COMBINATIONS];
 
     public int received = 0;
-    float averageLat = 0, averageLong = 0;
+    public float averageLat = 0, averageLong = 0;
+    public byte lastConfiguration = -1;
+
 
     static {
         conf = new Configuration[128];
@@ -43,7 +45,7 @@ public class Experiment {
         return sb.toString();
     }
 
-    public String printConfiguration(int configuration) {
+    private String printConfiguration(int configuration) {
         double per = ((double)packets[configuration]) / MAX_TEST;
 
         StringBuilder sb = new StringBuilder(300);
@@ -51,6 +53,10 @@ public class Experiment {
         sb.append(String.format("\tData rate: %s\tCoding Rate: %s\tTrasmission power: %s",conf[configuration].dr, conf[configuration].cr, conf[configuration].dr));
         sb.append(String.format("\tReceived packets: %d\tPER: %f\n\n",packets[configuration],per));
         return sb.toString();
+    }
+
+    public String printLastConfiguration() {
+        return printConfiguration(this.lastConfiguration);
     }
 }
 

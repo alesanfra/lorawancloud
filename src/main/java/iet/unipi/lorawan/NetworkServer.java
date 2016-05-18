@@ -370,12 +370,11 @@ public class NetworkServer {
         }
 
         // Decrypt payload
-
         byte[] decrypted = fm.getDecryptedPayload(mote.appSessionKey);
         activity.info(String.format("Received payload (%d bytes): %s", decrypted.length, new String(Hex.encode(decrypted))));
 
-
-        messages.add(new Message(fm.getDevAddress(), rxpk, decrypted));
+        // Add message to queue
+        messages.add(new Message(fm.getDevAddress(), decrypted));
 
 
         // Send ack if needed
@@ -441,10 +440,6 @@ public class NetworkServer {
             mote.frameCounterDown++;
         }
     }
-
-
-
-
 
     /**
      * Entry point
