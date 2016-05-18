@@ -375,7 +375,7 @@ public class NetworkServer {
         activity.info(String.format("Received payload (%d bytes): %s", decrypted.length, new String(Hex.encode(decrypted))));
 
 
-        messages.add(new Message(rxpk,decrypted));
+        messages.add(new Message(fm.getDevAddress(), rxpk, decrypted));
 
 
         // Send ack if needed

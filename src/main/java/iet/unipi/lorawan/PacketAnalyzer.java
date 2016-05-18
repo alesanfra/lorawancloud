@@ -1,6 +1,5 @@
 package iet.unipi.lorawan;
 
-import org.json.JSONObject;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -15,11 +14,24 @@ import java.util.logging.Logger;
 
 public class PacketAnalyzer extends Thread {
 
+    class LastTest {
+        private int test;
+        private int configuration;
+
+        public LastTest(int test, int configuration) {
+            this.test = test;
+            this.configuration = configuration;
+        }
+
+        public boolean is(int test, int configuration) {
+            return (test == this.test && configuration == this.configuration);
+        }
+    }
+
+
     private final BlockingQueue<Message> messages;
-
-
-    private final Map<Integer,String[]> test = new HashMap<>();
-
+    private final Map<String, Map<Integer, Experiment>> test = new HashMap<>();
+    private final Map<String, LastTest> lastTest = new HashMap<>();
 
     // Log
     private final static Logger logPackets = Logger.getLogger("Packet analyzer: received packets");
@@ -64,13 +76,45 @@ public class PacketAnalyzer extends Thread {
                 Message message = messages.take();
 
                 // Parse payload
+                FrameMessage fm = new FrameMessage(new MACMessage(message.jsonObject.getString("data")));
 
+
+                if (message.payload.length != 10) {
+                    activity.warning("INVALID payload: length != 10 bytes");
+                    return;
+                }
+
+                ByteBuffer bb = ByteBuffer.wrap(message.payload).order(ByteOrder.LITTLE_ENDIAN);
+                byte testN = bb.get();
+                byte configuration = bb.get();
+                float latitude = bb.getFloat();
+                float longitude = bb.getFloat();
+
+
+                Map<Integer, Experiment> moteExperiments = test.get(message.devAddress);
 
                 // If new test, print result
+                if (moteExperiments == null) {
+                    moteExperiments = new HashMap<>();
+                    test.put(message.devAddress, moteExperiments);
+                }
+
+
+                Experiment ex = moteExperiments.get(testN);
+
+                if (ex == null) {
+                    ex = new Experiment(message.devAddress,testN);
+                    moteExperiments.put((int) testN, ex);
+                }
 
 
                 // Check datarate, codingrate, power and update statistics
+                ex.packets[configuration]++;
 
+                // Update average coordinates
+                ex.averageLat = (ex.averageLat*ex.received + latitude) / (ex.received+1);
+                ex.averageLong = (ex.averageLong*ex.received + latitude) / (ex.received+1);
+                ex.received++;
 
                 //
 
