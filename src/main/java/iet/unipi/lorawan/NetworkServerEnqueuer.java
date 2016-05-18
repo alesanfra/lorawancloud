@@ -11,17 +11,17 @@ import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.Map;
-import java.util.Queue;
+import java.util.concurrent.BlockingQueue;
 
 public class NetworkServerEnqueuer extends Thread {
 
-    private final Queue<MACMessage> messages;
+    private final BlockingQueue<MACMessage> messages;
     private final Map<String,LoraMote> motes; // Key must be devEUI
 
     private BufferedReader fromAS;
 
 
-    public NetworkServerEnqueuer(Queue<MACMessage> messages, Socket socket, Map<String, LoraMote> motes) {
+    public NetworkServerEnqueuer(BlockingQueue<MACMessage> messages, Socket socket, Map<String, LoraMote> motes) {
         this.messages = messages;
         this.motes = motes;
 
@@ -64,10 +64,11 @@ public class NetworkServerEnqueuer extends Thread {
                 );
 
                 // Enqueue message
-                messages.add(macMessage);
-
+                messages.put(macMessage);
 
             } catch (IOException e) {
+                e.printStackTrace();
+            } catch (InterruptedException e) {
                 e.printStackTrace();
             }
         }

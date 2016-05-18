@@ -170,7 +170,7 @@ public class NetworkServer implements Runnable {
                 appServers.put(appEUI,appServer);
 
                 // Faccio partire il tread Receiver
-                Thread sender = new Thread(new NetworkServerSender(
+                Thread sender = new Thread(new NetworkServerDownstreamForwarder(
                         motes,
                         gateways,
                         appServer
