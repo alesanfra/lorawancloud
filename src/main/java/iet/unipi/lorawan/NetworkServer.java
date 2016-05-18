@@ -17,14 +17,8 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 
-/**
- * Created by alessio on 17/05/16.
- */
+public class NetworkServer implements Runnable {
 
-
-public class NetworkServer {
-
-    public static final String APPS_CONF = "conf/apps.json";
     public static final String MOTES_CONF = "conf/motes.json";
 
     private static final int MAX_THREADS = 10;
@@ -38,10 +32,18 @@ public class NetworkServer {
     // Sockets
     private final ServerSocket listener;
 
+    // Hashmap
     private final Map<String,LoraMote> motes;
     private final Map<String,InetSocketAddress> gateways;
     private final Map<String,Socket> appServers;
 
+
+    /**
+     * Default Constructor:
+     *      - allocate all the hasmaps
+     *      - load from file the mote list
+     *      - start receiver
+     */
 
     public NetworkServer() {
 
@@ -73,6 +75,12 @@ public class NetworkServer {
         //executor.execute(receiver);
     }
 
+
+    /**
+     * Load all mote parameters from a json file
+     * @param motesConf Path of the configuration file
+     * @return Hashmap with key == deviece addess and value == LoraMote
+     */
 
     private Map<String,LoraMote> loadMotesFromFile(String motesConf) {
         String file = "{}";
@@ -130,6 +138,11 @@ public class NetworkServer {
     }
 
 
+    /**
+     *
+     */
+
+    @Override
     public void run() {
         while (true) {
             try {
@@ -137,20 +150,27 @@ public class NetworkServer {
                 BufferedReader in = new BufferedReader(new InputStreamReader(appServer.getInputStream(), StandardCharsets.US_ASCII));
                 String line = in.readLine();
 
-                if (line.length() != EUI_LENGTH) {
-                    break;
-                }
-
                 // Leggo a quale applicazione vuole registrarsi
                 JSONObject message = new JSONObject(line);
                 String appEUI = message.getString("appeui");
+
+                if (appEUI.length() != EUI_LENGTH) {
+                    break;
+                }
+
+                Socket app = appServers.get(appEUI);
+
+                if (app != null && !app.isClosed()) {
+                    // L'applicazione era gia registrata e ancora attiva
+                    appServer.close();
+                    break;
+                }
 
                 // Salvo il socket - TODO: controllare che non ci sia già e gestire
                 appServers.put(appEUI,appServer);
 
                 // Faccio partire il tread Receiver
                 Thread sender = new Thread(new NetworkServerSender(
-                        GATEWAYS__LISTENING_PORT,
                         motes,
                         gateways,
                         appServer
@@ -167,6 +187,12 @@ public class NetworkServer {
             }
         }
     }
+
+
+    /**
+     * Start method
+     * @param args
+     */
 
     public static void main(String[] args) {
         NetworkServer networkServer = new NetworkServer();

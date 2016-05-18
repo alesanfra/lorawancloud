@@ -26,6 +26,7 @@ public class LoraMote {
     public byte[] appSessionKey;
     public int frameCounterUp;
     public int frameCounterDown;
+    public boolean rx1Enabled = true;
 
     /**
      * Standard constructor
