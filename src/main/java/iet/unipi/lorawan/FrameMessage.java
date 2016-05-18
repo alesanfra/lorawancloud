@@ -214,6 +214,14 @@ public class FrameMessage {
     public String getDevAddress() {
         byte[] dev_addr = Arrays.copyOf(devAddress,devAddress.length);
         ArrayUtils.reverse(dev_addr);
+        return new String(Hex.encode(dev_addr));
+    }
+
+    /*
+
+    public String getDevAddress() {
+        byte[] dev_addr = Arrays.copyOf(devAddress,devAddress.length);
+        ArrayUtils.reverse(dev_addr);
 
         StringBuilder sb = new StringBuilder(11);
 
@@ -224,6 +232,6 @@ public class FrameMessage {
             sb.append(String.format("%02X",dev_addr[i]));
         }
         return sb.toString().toUpperCase();
-    }
+    }*/
 
 }

@@ -33,7 +33,7 @@ public class JoinAccept {
         this.netID = NET_ID;
         this.devAddress = devAddress;
         this.DLsettings = 0; // Offset = 0, RX2 DR = 0
-        this.RxDelay = (byte) (NetworkServerEvent.RECEIVE_DELAY1 / 1000000);
+        this.RxDelay = (byte) (NetworkServer.RECEIVE_DELAY1 / 1000000);
         this.CFList = new byte[0];
     }
 
