@@ -95,11 +95,10 @@ public class PacketAnalyzer extends Thread {
                     if (mote.lastTest >= 0) {
                         Experiment lastExperiment = mote.experiments[mote.lastTest];
 
-                        //activity.info("nessun last experiment");
-
-                        if (lastExperiment.lastConf >= 0) {
+                        if (lastExperiment.isNotFirst()) {
                             activity.info(lastExperiment.printLastConfiguration());
                         }
+
                         activity.info(lastExperiment.print());
                     }
                     mote.lastTest = testN;
@@ -107,17 +106,15 @@ public class PacketAnalyzer extends Thread {
 
 
                 // check configuration, if new one print the old one
-                if (configuration != exp.lastConf) {
-                    if (exp.lastConf >= 0) {
-                        //activity.info("cambiata configurazione");
+                if (exp.lastConfigurationWasNot(configuration, msg.payload.length)) {
+                    if (exp.isNotFirst()) {
                         activity.info(exp.printLastConfiguration());
                     }
-                    exp.lastConf = configuration;
+                    exp.saveConfiguration(configuration, msg.payload.length);
                 }
 
                 // Aggiungo pacchetto all'esperimento
-                exp.addPacket(configuration,latitude,longitude);
-
+                exp.addPacket(configuration,msg.payload.length,latitude,longitude);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
