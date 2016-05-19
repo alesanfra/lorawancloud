@@ -14,7 +14,7 @@ import java.util.logging.Logger;
 
 public class PacketAnalyzer extends Thread {
     private final BlockingQueue<Message> messages;
-    private final Map<String, Map<Integer, Experiment>> test = new HashMap<>();
+    private final Map<String, Map<Integer, Experiment>> testData = new HashMap<>();
     private final Map<String, Experiment> lastTest = new HashMap<>();
 
     // Log
@@ -52,6 +52,8 @@ public class PacketAnalyzer extends Thread {
         } catch (IOException e) {
             e.printStackTrace();
         }
+
+
     }
 
 
@@ -61,69 +63,62 @@ public class PacketAnalyzer extends Thread {
 
     @Override
     public void run() {
-
+        activity.info("Strating PacketAnalyzer");
         while (true) {
             try {
-                Message message = messages.take();
-                String devAddr = message.devAddress;
+                Message msg = messages.take();
+                String devAddr = msg.devAddress;
 
-                // Parse payload
-                if (message.payload.length != 10) {
-                    activity.warning("INVALID payload: length != 10 bytes");
+                // Parse payload    | testN | conf | lat | long |
+                if (msg.payload.length < 10) {
+                    activity.warning("INVALID payload: length < 10 bytes");
                     break;
                 }
-
-                ByteBuffer bb = ByteBuffer.wrap(message.payload).order(ByteOrder.LITTLE_ENDIAN);
+                ByteBuffer bb = ByteBuffer.wrap(msg.payload).order(ByteOrder.LITTLE_ENDIAN);
                 byte testN = bb.get();
                 byte configuration = bb.get();
                 float latitude = bb.getFloat();
                 float longitude = bb.getFloat();
 
-
-                Map<Integer, Experiment> moteExperiments = test.get(devAddr);
+                // Get experiments of one mote
+                Map<Integer, Experiment> experiments = testData.get(devAddr);
 
                 // If new mote, init structures
-                if (moteExperiments == null) {
-                    moteExperiments = new HashMap<>();
-                    test.put(devAddr, moteExperiments);
+                if (experiments == null) {
+                    experiments = new HashMap<>();
+                    testData.put(devAddr, experiments);
                 }
 
 
-                Experiment ex = moteExperiments.get(testN);
+                Experiment exp = experiments.get(testN);
 
                 // If new test, init Experiment and print last
-                if (ex == null) {
-                    ex = new Experiment(devAddr,testN);
-                    moteExperiments.put((int) testN, ex);
+                if (exp == null) {
+                    exp = new Experiment(devAddr,testN);
+                    experiments.put((int) testN, exp);
 
                     Experiment lastExperiment = lastTest.get(devAddr);
                     if (lastExperiment != null) {
-                        if (lastExperiment.lastConfiguration >= 0) {
+                        if (lastExperiment.lastConf >= 0) {
                             activity.info(lastExperiment.printLastConfiguration());
                         }
-
                         activity.info(lastExperiment.print());
                     }
-                    lastTest.put(devAddr, ex);
+                    lastTest.put(devAddr, exp);
                 }
 
                 // check configuration, if new one print the old one
-                if (configuration != ex.lastConfiguration) {
-                    if (ex.lastConfiguration >= 0) {
-                        activity.info(ex.printLastConfiguration());
+                if (configuration != exp.lastConf) {
+                    if (exp.lastConf >= 0) {
+                        activity.info(exp.printLastConfiguration());
                     }
-
-                    ex.lastConfiguration = configuration;
+                    exp.lastConf = configuration;
                 }
 
 
-                // Check datarate, codingrate, power and update statistics
-                ex.packets[configuration]++;
+                // Aggiungo pacchetto all'esperimento
+                exp.addPacket(configuration,latitude,longitude);
 
-                // Update average coordinates
-                ex.averageLat = (ex.averageLat*ex.received + latitude) / (ex.received+1);
-                ex.averageLong = (ex.averageLong*ex.received + longitude) / (ex.received+1);
-                ex.received++;
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }

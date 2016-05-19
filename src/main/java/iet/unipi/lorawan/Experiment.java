@@ -3,22 +3,36 @@ package iet.unipi.lorawan;
 
 public class Experiment {
 
-    public static final Configuration[] conf;
+    private static class Configuration {
+        private static final String[] powers = {"14 dBm","11 dBm","8 dBm","5 dBm","2 dBm"};
 
+        public final String dr;
+        public final String cr;
+        public final String pw;
+
+        public Configuration(int cr, int pw, int dr) {
+            this.dr = String.format("SF%dBW125",12-dr);
+            this.cr = String.format("4/%d",cr+5);
+            this.pw = powers[pw];
+        }
+    }
+
+    private static final Configuration[] conf;
     private static final int MAX_COMBINATIONS = 128;
     private static final int MAX_TEST = 100;
 
-    public final String devEUI;
-    public final int testNumber;
-    public final int[] packets = new int[MAX_COMBINATIONS];
+    private final String devAddress;
+    private final int testNumber;
+    private final int[] packets = new int[MAX_COMBINATIONS];
 
-    public int received = 0;
-    public float averageLat = 0, averageLong = 0;
-    public byte lastConfiguration = -1;
+    private int received = 0;
+    private float averageLat = 0;
+    private float averageLong = 0;
 
+    public byte lastConf = -1;
 
     static {
-        conf = new Configuration[128];
+        conf = new Configuration[MAX_COMBINATIONS];
 
         // index = cr * 5 * 6 + pw * 6 + dr
 
@@ -31,15 +45,14 @@ public class Experiment {
         }
     }
 
-
-    public Experiment(String devEUI, int testNumber) {
-        this.devEUI = devEUI;
+    public Experiment(String devAddress, int testNumber) {
+        this.devAddress = devAddress;
         this.testNumber = testNumber;
     }
 
     public String print() {
         StringBuilder sb = new StringBuilder(300);
-        sb.append(String.format("\n\tEnd experiment %d of mote %s\n",testNumber,devEUI));
+        sb.append(String.format("\n\tEnd experiment %d of mote %s\n",testNumber, devAddress));
         sb.append(String.format("\tReceived packets: %d",received));
         sb.append(String.format("\tAverage position: %f %f\n\n",averageLat,averageLong));
         return sb.toString();
@@ -49,28 +62,27 @@ public class Experiment {
         double per = ((double)packets[configuration]) / MAX_TEST;
 
         StringBuilder sb = new StringBuilder(300);
-        sb.append(String.format("\n\tExperiment %d of mote %s\n",testNumber,devEUI));
+        sb.append(String.format("\n\tExperiment %d of mote %s\n",testNumber, devAddress));
         sb.append(String.format("\tData rate: %s\tCoding Rate: %s\tTrasmission power: %s",conf[configuration].dr, conf[configuration].cr, conf[configuration].dr));
         sb.append(String.format("\tReceived packets: %d\tPER: %f\n\n",packets[configuration],per));
         return sb.toString();
     }
 
     public String printLastConfiguration() {
-        return printConfiguration(this.lastConfiguration);
+        return printConfiguration(this.lastConf);
+    }
+
+    public void addPacket(int configuration, float latitude, float longitude) {
+        packets[configuration]++;
+
+        // Update average coordinates
+        averageLat = (averageLat * received + latitude) / (received+1);
+        averageLong = (averageLong * received + longitude) / (received+1);
+
+        // Update received
+        received++;
     }
 }
 
 
-class Configuration {
-    private static final String[] powers = {"14 dBm","11 dBm","8 dBm","5 dBm","2 dBm"};
 
-    public final String dr;
-    public final String cr;
-    public final String pw;
-
-    public Configuration(int cr, int pw, int dr) {
-        this.dr = String.format("SF%dBW125",12-dr);
-        this.cr = String.format("4/%d",cr+5);
-        this.pw = powers[pw];
-    }
-}

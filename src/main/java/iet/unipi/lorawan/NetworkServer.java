@@ -108,6 +108,10 @@ public class NetworkServer {
      */
 
     public void run() {
+
+        
+
+
         try {
             sock = new DatagramSocket(UDP_PORT);
             activity.info("Listening to: " + sock.getLocalAddress().getHostAddress() + " : " + sock.getLocalPort());
