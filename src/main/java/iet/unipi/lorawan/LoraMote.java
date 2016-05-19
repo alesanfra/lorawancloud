@@ -10,6 +10,8 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.security.Key;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 
 
 /**
@@ -27,6 +29,9 @@ public class LoraMote {
     public int frameCounterUp;
     public int frameCounterDown;
     public boolean rx1Enabled = true;
+
+    public final Experiment[] experiments = new Experiment[256];
+    public int lastTest = -1;
 
     /**
      * Standard constructor

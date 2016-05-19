@@ -19,7 +19,7 @@ public class Experiment {
 
     private static final Configuration[] conf;
     private static final int MAX_COMBINATIONS = 128;
-    private static final int MAX_TEST = 100;
+    private static final int MAX_TEST = 10;
 
     private final String devAddress;
     private final int testNumber;
@@ -52,19 +52,18 @@ public class Experiment {
 
     public String print() {
         StringBuilder sb = new StringBuilder(300);
-        sb.append(String.format("\n\tEnd experiment %d of mote %s\n",testNumber, devAddress));
-        sb.append(String.format("\tReceived packets: %d",received));
-        sb.append(String.format("\tAverage position: %f %f\n\n",averageLat,averageLong));
+        sb.append(String.format("\n\tEnd EXPERIMENT %d of mote %s\n",testNumber, devAddress));
+        sb.append(String.format("\tReceived packets: %d\n",received));
+        sb.append(String.format("\tAverage position: %f %f\n",averageLat,averageLong));
         return sb.toString();
     }
 
     private String printConfiguration(int configuration) {
-        double per = ((double)packets[configuration]) / MAX_TEST;
-
+        double per = (1 - (((double)packets[configuration]) / MAX_TEST)) * 100;
         StringBuilder sb = new StringBuilder(300);
-        sb.append(String.format("\n\tExperiment %d of mote %s\n",testNumber, devAddress));
-        sb.append(String.format("\tData rate: %s\tCoding Rate: %s\tTrasmission power: %s",conf[configuration].dr, conf[configuration].cr, conf[configuration].dr));
-        sb.append(String.format("\tReceived packets: %d\tPER: %f\n\n",packets[configuration],per));
+        sb.append(String.format("\n\tEnd CONFIG: %d\t\t  (experiment %d of mote %s)\n",configuration, testNumber, devAddress));
+        sb.append(String.format("\tData rate: %s\t  Coding Rate: %s\t  Trasmission power: %s\n",conf[configuration].dr, conf[configuration].cr, conf[configuration].pw));
+        sb.append(String.format("\tReceived pkts: %d\t  PER: %f %%\n",packets[configuration],per));
         return sb.toString();
     }
 

@@ -14,23 +14,27 @@ import java.util.logging.Logger;
 
 public class PacketAnalyzer extends Thread {
     private final BlockingQueue<Message> messages;
-    private final Map<String, Map<Integer, Experiment>> testData = new HashMap<>();
-    private final Map<String, Experiment> lastTest = new HashMap<>();
+    private final Map<String, LoraMote> motes;
+    //private final Map<String, Map<Integer, Experiment>> testData = new HashMap<>();
+    //private final Map<String, Integer> lastTest = new HashMap<>();
 
     // Log
-    private final static Logger logPackets = Logger.getLogger("Packet analyzer: received packets");
-    private static final String LOG_FILE = "data/received.txt";
+    //private final static Logger logPackets = Logger.getLogger("Packet analyzer: received packets");
+    //private static final String LOG_FILE = "data/received.txt";
     private final static Logger activity = Logger.getLogger("Packet analyzer: activity");
     private static final String ACTIVITY_FILE = "data/analyzer-activity.txt";
+
 
     /**
      *
      * @param messages
      */
 
-    public PacketAnalyzer(BlockingQueue<Message> messages) {
+    public PacketAnalyzer(BlockingQueue<Message> messages, Map<String,LoraMote> motes) {
         this.messages = messages;
+        this.motes = motes;
 
+        /*
         // Init logger for received packets
         logPackets.setUseParentHandlers(false);
         logPackets.setLevel(Level.INFO);
@@ -40,7 +44,7 @@ public class PacketAnalyzer extends Thread {
             logPackets.addHandler(logPacketsFile);
         } catch (IOException e) {
             e.printStackTrace();
-        }
+        }*/
 
 
         // Init logger for server activity
@@ -52,8 +56,6 @@ public class PacketAnalyzer extends Thread {
         } catch (IOException e) {
             e.printStackTrace();
         }
-
-
     }
 
 
@@ -63,7 +65,7 @@ public class PacketAnalyzer extends Thread {
 
     @Override
     public void run() {
-        activity.info("Strating PacketAnalyzer");
+        activity.info("Starting PacketAnalyzer");
         while (true) {
             try {
                 Message msg = messages.take();
@@ -75,46 +77,43 @@ public class PacketAnalyzer extends Thread {
                     break;
                 }
                 ByteBuffer bb = ByteBuffer.wrap(msg.payload).order(ByteOrder.LITTLE_ENDIAN);
-                byte testN = bb.get();
-                byte configuration = bb.get();
                 float latitude = bb.getFloat();
                 float longitude = bb.getFloat();
+                byte testN = bb.get();
+                byte configuration = bb.get();
 
-                // Get experiments of one mote
-                Map<Integer, Experiment> experiments = testData.get(devAddr);
+                LoraMote mote = motes.get(devAddr);
 
-                // If new mote, init structures
-                if (experiments == null) {
-                    experiments = new HashMap<>();
-                    testData.put(devAddr, experiments);
-                }
-
-
-                Experiment exp = experiments.get(testN);
+                Experiment exp = mote.experiments[testN];
 
                 // If new test, init Experiment and print last
                 if (exp == null) {
                     exp = new Experiment(devAddr,testN);
-                    experiments.put((int) testN, exp);
+                    mote.experiments[testN] = exp;
 
-                    Experiment lastExperiment = lastTest.get(devAddr);
-                    if (lastExperiment != null) {
+
+                    if (mote.lastTest >= 0) {
+                        Experiment lastExperiment = mote.experiments[mote.lastTest];
+
+                        //activity.info("nessun last experiment");
+
                         if (lastExperiment.lastConf >= 0) {
                             activity.info(lastExperiment.printLastConfiguration());
                         }
                         activity.info(lastExperiment.print());
                     }
-                    lastTest.put(devAddr, exp);
+                    mote.lastTest = testN;
                 }
+
 
                 // check configuration, if new one print the old one
                 if (configuration != exp.lastConf) {
                     if (exp.lastConf >= 0) {
+                        //activity.info("cambiata configurazione");
                         activity.info(exp.printLastConfiguration());
                     }
                     exp.lastConf = configuration;
                 }
-
 
                 // Aggiungo pacchetto all'esperimento
                 exp.addPacket(configuration,latitude,longitude);

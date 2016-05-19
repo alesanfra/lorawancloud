@@ -97,7 +97,7 @@ public class NetworkServer {
         }
 
         // Start packet analyzer
-        PacketAnalyzer packetAnalyzer = new PacketAnalyzer(messages);
+        PacketAnalyzer packetAnalyzer = new PacketAnalyzer(messages,motes);
         packetAnalyzer.start();
     }
 
@@ -108,10 +108,6 @@ public class NetworkServer {
      */
 
     public void run() {
-
-        
-
-
         try {
             sock = new DatagramSocket(UDP_PORT);
             activity.info("Listening to: " + sock.getLocalAddress().getHostAddress() + " : " + sock.getLocalPort());
@@ -220,7 +216,7 @@ public class NetworkServer {
 
             String appEUI = mote.getString("appeui");
             String devEUI = mote.getString("deveui");
-            String devAddr = mote.getString("devaddr");
+            String devAddr = mote.getString("devaddr").toLowerCase();
 
             // Creo un istanza di LoraMote e la aggiungo alla lista di motes
             LoraMote newMote;
