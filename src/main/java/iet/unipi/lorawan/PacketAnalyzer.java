@@ -13,39 +13,23 @@ import java.util.logging.Logger;
 
 
 public class PacketAnalyzer extends Thread {
-    private final BlockingQueue<Message> messages;
-    private final Map<String, LoraMote> motes;
-    //private final Map<String, Map<Integer, Experiment>> testData = new HashMap<>();
-    //private final Map<String, Integer> lastTest = new HashMap<>();
+    private final BlockingQueue<Message> messages; // Messages to be analyzed
+    private final Map<String, LoraMote> motes; // List of all known motes
 
-    // Log
-    //private final static Logger logPackets = Logger.getLogger("Packet analyzer: received packets");
-    //private static final String LOG_FILE = "data/received.txt";
+    // Logger
     private final static Logger activity = Logger.getLogger("Packet analyzer: activity");
     private static final String ACTIVITY_FILE = "data/analyzer-activity.txt";
 
 
     /**
-     *
-     * @param messages
+     * Standard constructor
+     * @param messages messages to be analyzed
+     * @param motes all known motes
      */
 
     public PacketAnalyzer(BlockingQueue<Message> messages, Map<String,LoraMote> motes) {
         this.messages = messages;
         this.motes = motes;
-
-        /*
-        // Init logger for received packets
-        logPackets.setUseParentHandlers(false);
-        logPackets.setLevel(Level.INFO);
-        try {
-            FileHandler logPacketsFile = new FileHandler(LOG_FILE, true);
-            logPacketsFile.setFormatter(new LogFormatter());
-            logPackets.addHandler(logPacketsFile);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }*/
-
 
         // Init logger for server activity
         activity.setLevel(Level.INFO);
@@ -60,7 +44,7 @@ public class PacketAnalyzer extends Thread {
 
 
     /**
-     *
+     * Packet Analyzer main function
      */
 
     @Override
@@ -76,14 +60,17 @@ public class PacketAnalyzer extends Thread {
                     activity.warning("INVALID payload: length < 10 bytes");
                     break;
                 }
+
                 ByteBuffer bb = ByteBuffer.wrap(msg.payload).order(ByteOrder.LITTLE_ENDIAN);
                 float latitude = bb.getFloat();
                 float longitude = bb.getFloat();
                 byte testN = bb.get();
                 byte configuration = bb.get();
 
+                // Get mote
                 LoraMote mote = motes.get(devAddr);
 
+                // Get experiment
                 Experiment exp = mote.experiments[testN];
 
                 // If new test, init Experiment and print last
@@ -91,15 +78,18 @@ public class PacketAnalyzer extends Thread {
                     exp = new Experiment(devAddr,testN);
                     mote.experiments[testN] = exp;
 
-
                     if (mote.lastTest >= 0) {
                         Experiment lastExperiment = mote.experiments[mote.lastTest];
 
+                        String str = "";
+
                         if (lastExperiment.isNotFirst()) {
-                            activity.info(lastExperiment.printLastConfiguration());
+                            str += lastExperiment.printLastConfiguration();
                         }
 
-                        activity.info(lastExperiment.print());
+                        str += lastExperiment.endExperiment();
+                        activity.info(str);
+                        lastExperiment.plotData(0);
                     }
                     mote.lastTest = testN;
                 }
@@ -113,30 +103,11 @@ public class PacketAnalyzer extends Thread {
                     exp.saveConfiguration(configuration, msg.payload.length);
                 }
 
-                // Aggiungo pacchetto all'esperimento
+                // Add packet to the experiment
                 exp.addPacket(configuration,msg.payload.length,latitude,longitude);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
         }
-    }
-
-
-    /**
-     * Print coordinates
-     * @param decrypted binary encoded coordinates (two 32-bit float)
-     */
-
-    private void printCoordinates(byte[] decrypted) {
-        if (decrypted.length < 8) {
-            activity.warning("INVALID coordinates: length < 8 bytes");
-            return;
-        }
-
-        ByteBuffer bb = ByteBuffer.wrap(decrypted).order(ByteOrder.LITTLE_ENDIAN);
-        float latitude = bb.getFloat();
-        float longitude = bb.getFloat();
-        activity.info(String.format("Coordinates: %f %f",latitude,longitude));
-        return;
     }
 }

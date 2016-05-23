@@ -55,12 +55,21 @@ public class NetworkServer {
     // Conf file
     public static final String MOTES_CONF = "conf/motes.json";
 
-    // List of all known motes
+    // Data Structures
     private final Map<String,LoraMote> motes;
     private final Map<String,InetSocketAddress> gateways;
     private final BlockingQueue<Message> messages;
+
+    // Socket
     private DatagramSocket sock;
 
+
+    /**
+     * Standard constructor:
+     *  - init motes, gateways and messages
+     *  - int logggers
+     *  - start packet analyzer thread
+     */
 
     public NetworkServer() {
         this.motes = loadMotesFromFile(MOTES_CONF);
@@ -107,7 +116,7 @@ public class NetworkServer {
      * Main function of the network server
      */
 
-    public void run() {
+    protected void run() {
         try {
             sock = new DatagramSocket(UDP_PORT);
             activity.info("Listening to: " + sock.getLocalAddress().getHostAddress() + " : " + sock.getLocalPort());
@@ -193,7 +202,7 @@ public class NetworkServer {
     /**
      * Load all mote parameters from a json file
      * @param motesConf Path of the configuration file
-     * @return Hashmap with key == deviece addess and value == LoraMote
+     * @return Hashmap with key == device addess and value == LoraMote
      */
 
     private Map<String,LoraMote> loadMotesFromFile(String motesConf) {
@@ -272,6 +281,7 @@ public class NetworkServer {
         for (LoraMote m: motes.values()) {
             if (Arrays.equals(mote.devEUI, jr.devEUI)) {
                 mote = motes.get(m.getDevEUI());
+                break;
             }
         }
 
@@ -282,7 +292,7 @@ public class NetworkServer {
 
         // Create Join Accept and encapsulate it in Mac Message
         JoinAccept ja = new JoinAccept(mote.devAddress);
-        MACMessage mac_ja = new MACMessage(ja, mote);
+        MACMessage macJA = new MACMessage(ja, mote);
 
         // Create json payload of GWMP message
         String txpk = GatewayMessage.getTxpk(
@@ -295,7 +305,7 @@ public class NetworkServer {
                 rxpk.getString("datr"),
                 rxpk.getString("codr"),
                 IPOL,
-                mac_ja.getEncryptedJoinAccept(mote.appKey),
+                macJA.getEncryptedJoinAccept(mote.appKey),
                 NCRC
         );
 
@@ -310,18 +320,17 @@ public class NetworkServer {
 
         if (!gateways.containsKey(gateway)) {
             activity.severe("Gateway PULL_RESP address not found");
-            return;
+        } else {
+            InetSocketAddress gw = gateways.get(gateway);
+
+            // Send Join Accept
+            sock.send(gw_ja.getPacket(gw));
+
+            // Create keys
+            mote.createSessionKeys(jr.devNonce, ja.appNonce, ja.netID);
+            mote.frameCounterDown = 0;
+            mote.frameCounterUp = 0;
         }
-
-        InetSocketAddress gw = gateways.get(gateway);
-
-        // Send Join Accept
-        sock.send(gw_ja.getPacket(gw));
-
-        // Create keys
-        mote.createSessionKeys(jr.devNonce, ja.appNonce, ja.netID);
-        mote.frameCounterDown = 0;
-        mote.frameCounterUp = 0;
     }
 
 
