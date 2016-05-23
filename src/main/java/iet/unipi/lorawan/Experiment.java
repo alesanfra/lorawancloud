@@ -228,15 +228,13 @@ public class Experiment {
 
 
     /**
-     *
+     * Plot data
      */
 
     public void plotData(int cr) {
-
-        String path = "data/plot/" + testNumber + ".dat";
+        String path = "data/plot/" + devAddress + "-" + testNumber + ".dat";
 
         try (PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter(path)))) {
-
             for(int dr: params.dataRates) {
                 out.printf("%d",dr);
                 for (int len: params.lengths) {
@@ -246,7 +244,6 @@ public class Experiment {
                 }
                 out.println();
             }
-
         } catch (IOException e) {
             e.printStackTrace();
         }
