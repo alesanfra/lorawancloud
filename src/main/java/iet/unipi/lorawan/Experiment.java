@@ -36,6 +36,11 @@ public class Experiment {
         }
     }
 
+    /**
+     * Parameters of teh experiment
+     */
+
+
     private static final class Parameters {
         public final boolean plot;
         public final int[] lengths;
@@ -55,9 +60,6 @@ public class Experiment {
     }
 
     private static final int CONFIGURATION_N = 6*5*4;
-    private static final int LENGTH_N = 2;
-    private static final int MAX_TEST = 5;
-
     private static final Configuration[] conf = new Configuration[CONFIGURATION_N] ; // dictionary of configuration. Ex: 5 => sf7, cr 4/5, pw 14 dBm
 
 
@@ -75,7 +77,7 @@ public class Experiment {
 
     // Received packets
     private int received = 0;
-    private final int[][] packets = new int[LENGTH_N][CONFIGURATION_N];
+    private final int[][] packets;
 
     // Average position
     private float averageLat = 0;
@@ -180,6 +182,7 @@ public class Experiment {
     public Experiment(String devAddress, int testNumber) {
         this.devAddress = devAddress.toLowerCase();
         this.testNumber = testNumber;
+        this.packets = new int[params.lengths.length][CONFIGURATION_N];
     }
 
 
@@ -205,7 +208,7 @@ public class Experiment {
 
     private String printConfiguration(int configuration, int length) {
         int lengthIndex = lengthIndexes.get(length);
-        double per = (1 - (((double)packets[lengthIndex][configuration]) / MAX_TEST)) * 100;
+        double per = (1 - (((double)packets[lengthIndex][configuration]) / params.repetitions)) * 100;
         StringBuilder sb = new StringBuilder(300);
         sb.append(String.format("\n\tEnd CONFIG: %d\t  Experiment %d of mote %s\n",configuration, testNumber, devAddress));
         sb.append(String.format("\tLength: %s\t\t  Data rate: %s\t  Coding Rate: %s\t  Trasmission power: %s\n", length, conf[configuration].dr, conf[configuration].cr, conf[configuration].pw));

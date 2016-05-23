@@ -47,10 +47,10 @@ public class NetworkServer {
 
 
     // Log
-    private final static Logger logPackets = Logger.getLogger("Lora Network Server: received packets");
+    private final static Logger logPackets = Logger.getLogger("Network Server: received packets");
     private static final String LOG_FILE = "data/received.txt";
-    private final static Logger activity = Logger.getLogger("Lora Network Server: activity");
-    private static final String ACTIVITY_FILE = "data/activity.txt";
+    private final static Logger activity = Logger.getLogger("Network Server: activity");
+    private static final String ACTIVITY_FILE = "data/netserver-activity.txt";
 
     // Conf file
     public static final String MOTES_CONF = "conf/motes.json";

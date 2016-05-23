@@ -28,8 +28,8 @@ public class LoraMote {
     public byte[] appSessionKey;
     public int frameCounterUp;
     public int frameCounterDown;
-    public boolean rx1Enabled = true;
 
+    // Experiment stuff
     public final Experiment[] experiments = new Experiment[256];
     public int lastTest = -1;
 
