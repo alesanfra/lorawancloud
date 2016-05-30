@@ -21,7 +21,7 @@ public class PacketAnalyzer extends Thread {
 
     // Logger
     private static final Logger activity = Logger.getLogger("Packet analyzer: activity");
-    private static final String ACTIVITY_FILE = "data/analyzer-activity.txt";
+    private static final String ACTIVITY_FILE = "data/parser-activity.txt";
 
 
     /**
