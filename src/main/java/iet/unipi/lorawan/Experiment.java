@@ -14,59 +14,14 @@ import java.util.Map;
 public class Experiment {
 
 
-    /**
-     * Convinience class to build a dictionary
-     * Ex: 5 => sf7, cr 4/5, pw 14 dBm
-     */
-
-    private static class Configuration {
-
-        // Reverse dictionaries
-        //private static final int[] lengths = {10,50};
-        private static final String[] powers = {"14 dBm","11 dBm","8 dBm","5 dBm","2 dBm"};
-
-        public final String dr;
-        public final String cr;
-        public final String pw;
-
-        public Configuration(int cr, int pw, int dr) {
-            this.dr = String.format("SF%dBW125",12-dr);
-            this.cr = String.format("4/%d",cr+5);
-            this.pw = powers[pw];
-        }
-    }
-
-    /**
-     * Parameters of teh experiment
-     */
-
-
-    private static final class Parameters {
-        public final boolean plot;
-        public final int[] lengths;
-        public final int[] codingRates;
-        public final int[] txPowers;
-        public final int[] dataRates;
-        public final int repetitions;
-
-        private Parameters(boolean plot, int[] lengths, int[] codingRates, int[] txPowers, int[] dataRates, int repetitions) {
-            this.plot = plot;
-            this.lengths = lengths;
-            this.codingRates = codingRates;
-            this.txPowers = txPowers;
-            this.dataRates = dataRates;
-            this.repetitions = repetitions;
-        }
-    }
-
     private static final int CONFIGURATION_N = 6*5*4;
     private static final Configuration[] conf = new Configuration[CONFIGURATION_N] ; // dictionary of configuration. Ex: 5 => sf7, cr 4/5, pw 14 dBm
 
 
     // Maps to get the indexes (no need for dr map given that they are already in interval [0,5]
-    private static final Map<Integer,Integer> lengthIndexes = new HashMap<>();
-    private static final Map<String,Integer> crIndexes = new HashMap<>();
-    private static final Map<Integer,Integer> powerIndexes = new HashMap<>();
+    public static final Map<Integer,Integer> lengthIndexes = new HashMap<>();
+    public static final Map<String,Integer> crIndexes = new HashMap<>();
+    public static final Map<Integer,Integer> powerIndexes = new HashMap<>();
 
     // Parameters
     private static final Parameters params;
@@ -311,7 +266,7 @@ public class Experiment {
     }
 
 
-    private int indexOf(int cr, int pw, int dr) {
+    public static int indexOf(int cr, int pw, int dr) {
         return (cr*5*6) + (pw*6) + dr;
     }
 }

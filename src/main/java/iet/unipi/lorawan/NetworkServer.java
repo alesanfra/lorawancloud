@@ -106,8 +106,8 @@ public class NetworkServer {
         }
 
         // Start packet analyzer
-        PacketAnalyzer packetAnalyzer = new PacketAnalyzer(messages,motes);
-        packetAnalyzer.start();
+        //PacketAnalyzer packetAnalyzer = new PacketAnalyzer(messages,motes, experiments);
+        //packetAnalyzer.start();
     }
 
 

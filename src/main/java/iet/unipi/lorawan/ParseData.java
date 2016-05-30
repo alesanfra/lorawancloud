@@ -1,37 +1,130 @@
 package iet.unipi.lorawan;
 
+import org.bouncycastle.util.encoders.Hex;
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.*;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.*;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.LinkedBlockingQueue;
 
 
 public class ParseData implements Runnable {
 
-    private final int N_TEST = 9;
 
-    String[] test = {"250m", "500m L", "500m NL", "1000m", "1500m", "2000m", "2500m rain", "2500m", "3000m"};
+    private class Range {
+        public final int min, max;
+        public Range(int min, int max) {
+            this.min = min;
+            this.max = max;
+        }
+    }
 
-    int[] lowerBound = {1, 249, 505, 721, 937, 1156, 1372, 1, 1};
-    int[] upperBound = {216, 464, 720, 936, 1152, 1371, 1554, 216, 216};
-    int[] metres = {250,500,1000,1005,1500,2000,2400,2500,3000};
+    // Data Structures
+    private final Map<String,LoraMote> motes;
+    private final BlockingQueue<Message> messages;
+    private List<JSONObject> packets = new LinkedList<>();
+    private final Thread packetAnalyzer;
 
-    private List<JSONObject>[] lists = new List[N_TEST];
+    public static final String MOTES_CONF = "conf/motes.json";
 
+    private final int[] distances = {500,1000,1500,2000,2500};
+
+
+    private final int[][][][] stats = new int[6][6][2][5]; // dr, dist, len, pw
+
+
+    /**
+     * Cobstructor
+     */
+
+    public ParseData() {
+        this.motes = loadMotesFromFile(MOTES_CONF);
+        this.messages = new LinkedBlockingQueue<>();
+
+        // Start packet analyzer
+        packetAnalyzer = new PacketAnalyzer(messages,motes,stats);
+        packetAnalyzer.start();
+    }
+
+
+    /**
+     * Load mote configuration form file
+     * @param motesConf
+     * @return
+     */
+
+    public Map<String,LoraMote> loadMotesFromFile(String motesConf) {
+        String file = "{}";
+        Map<String, LoraMote> map = new ConcurrentHashMap<>();
+
+        // Read json from file
+        try {
+            Path path = Paths.get(motesConf);
+            file = new String(Files.readAllBytes(path), StandardCharsets.US_ASCII);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        JSONArray motes = new JSONObject(file).getJSONArray("motes");
+
+        // Scorro tutti i motes
+        for (int i=0; i<motes.length(); i++) {
+            JSONObject mote = motes.getJSONObject(i);
+
+            String appEUI = mote.getString("appeui");
+            String devEUI = mote.getString("deveui");
+            String devAddr = mote.getString("devaddr").toLowerCase();
+
+            // Creo un istanza di LoraMote e la aggiungo alla lista di motes
+            LoraMote newMote;
+
+            if (mote.getString("join").equals("OTA")) {
+                String appKey = mote.getString("appkey");
+                newMote = new LoraMote(
+                        devEUI,
+                        appEUI,
+                        devAddr,
+                        appKey,
+                        "",
+                        ""
+                );
+            } else {
+                String netSessKey = mote.getString("netsesskey");
+                String appSessKey = mote.getString("appsesskey");
+                newMote = new LoraMote(
+                        devEUI,
+                        appEUI,
+                        devAddr,
+                        "",
+                        netSessKey,
+                        appSessKey
+                );
+            }
+
+            // Aggiungo il nuovo mote alla lista
+            map.put(devAddr,newMote);
+        }
+
+        return map;
+    }
+
+
+    /**
+     * Body of thread
+     */
 
     @Override
     public void run() {
 
-        // Init queues
-        for(int i = 0; i < lists.length; i++) {
-            lists[i] = new LinkedList<>();
-        }
-
-
         try (
                 BufferedReader in = new BufferedReader(new FileReader("data/received.txt"));
-                PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter("data/trasp.txt")))
-
         ) {
             String line;
             int iteration;
@@ -41,10 +134,9 @@ public class ParseData implements Runnable {
              * CARICO TUTTO IN RAM
              */
 
-            read1: for (iteration=0; (line = in.readLine()) != null; iteration++) {
+            for (iteration = 0; (line = in.readLine()) != null; iteration++) {
 
                 JSONObject rxpk = new JSONObject(line).getJSONArray("rxpk").getJSONObject(0);
-
 
                 // Check CRC
                 if (rxpk.getInt("stat") != 1) {
@@ -58,159 +150,79 @@ public class ParseData implements Runnable {
                     FrameMessage frame = new FrameMessage(new MACMessage(rxpk.getString("data")));
                     System.out.printf("Iter: %d, Frame %d\n", iteration, frame.counter);
 
-                    if (iteration < 16) {
-                        continue;
-                    } else if (iteration > 1284) {
-                        break read1;
-                    }
+                    // Add message to queue
+                    LoraMote mote = motes.get(frame.getDevAddress());
+                    byte[] decrypted = frame.getDecryptedPayload(mote.appSessionKey);
+                    messages.add(new Message(frame.getDevAddress(), decrypted));
 
-
-                    for (int i=0; i<N_TEST-2; i++) {
-
-                        if (frame.counter >= lowerBound[i] && frame.counter <= upperBound[i]) {
-                            System.out.printf("Iter: %d, Frame %d\n", iteration, frame.counter);
-                            lists[i].add(rxpk);
-                            break;
-                        }
-                    }
-                }
-            }
-
-            read2: for (; (line = in.readLine()) != null; iteration++) {
-
-                JSONObject rxpk = new JSONObject(line).getJSONArray("rxpk").getJSONObject(0);
-
-
-                // Check CRC
-                if (rxpk.getInt("stat") != 1) {
-                    // TODO: handle wrong crc packets
-                } else {
-                    FrameMessage frame = new FrameMessage(new MACMessage(rxpk.getString("data")));
-                    System.out.printf("Iter: %d, Frame %d\n", iteration, frame.counter);
-
-                    if (iteration > 1367) {
-                        break read2;
-                    }
-
-
-
-                    if (frame.counter >= lowerBound[7] && frame.counter <= upperBound[7]) {
-                        System.out.printf("Iter: %d, Frame %d\n", iteration, frame.counter);
-                        lists[7].add(rxpk);
-                    }
-
-                }
-            }
-
-            read3: for (; (line = in.readLine()) != null; iteration++) {
-
-                JSONObject rxpk = new JSONObject(line).getJSONArray("rxpk").getJSONObject(0);
-
-                // Check CRC
-                if (rxpk.getInt("stat") != 1) {
-                    // TODO: handle wrong crc packets
-                } else {
-                    FrameMessage frame = new FrameMessage(new MACMessage(rxpk.getString("data")));
-                    System.out.printf("Iter: %d, Frame %d\n", iteration, frame.counter);
-
-                    if (frame.counter >= lowerBound[8] && frame.counter <= upperBound[8]) {
-                        System.out.printf("Iter: %d, Frame %d\n", iteration, frame.counter);
-                        lists[8].add(rxpk);
-                    }
-
+                    packets.add(rxpk);
                 }
             }
 
 
             System.out.println("Tutti i pacchetti sono stati parsati correttamente");
-            System.out.println("CRc sbagliato: " + crc_error);
+            System.out.println("CRC sbagliato: " + crc_error);
 
 
-            /**
-             * PARSING DEI PACCHETTI
-             */
-
-            int test[][][][] = new int[6][9][3][4];
-
-            Map<String,Integer> dr = new HashMap<>();
-            dr.put("SF7BW125",0);
-            dr.put("SF8BW125",1);
-            dr.put("SF9BW125",2);
-            dr.put("SF10BW125",3);
-            dr.put("SF11BW125",4);
-            dr.put("SF12BW125",5);
-
-            Map<String,Integer> cr = new HashMap<>();
-            cr.put("4/5",0);
-            cr.put("4/6",1);
-            cr.put("4/7",2);
-            cr.put("4/8",3);
-
-            // Scorro la lista e ottengo le statistiche
-            for (int distance=0; distance<lists.length; distance++) {
-                // Conto i pacchetti
-                for (JSONObject json: lists[distance]) {
-                    FrameMessage frame = new FrameMessage(new MACMessage(json.getString("data")));
-
-                    int power = (frame.counter - lowerBound[distance]) / 72;
-                    int datr = dr.get(json.getString("datr"));
-                    int codr = cr.get(json.getString("codr"));
-
-                    test[datr][distance][power][codr]++;
-                }
-            }
+            // Aggiungo un pacchetto fake per finire l'analisi
+            messages.add(new Message("a1b20003", Hex.decode("00000000000000007F00")));
 
 
-            Map<Integer,String> pow = new HashMap<>();
-            pow.put(0,"14");
-            pow.put(1,"8");
-            pow.put(2,"2");
+            Range[] configs = {new Range(4, 2),new Range(3, 0),new Range(2, 0),new Range(2, 0),new Range(2, 0)};
 
-            // 6 tabelle, una per ogni data rate
-            for (int[][][] table: test) {
 
-                // Per ogni data rate stampo una tabella
-                for (int distance=0; distance<table.length; distance++) {
+            // Leggo gli esperimenti
+            packetAnalyzer.join();
 
-                    // Scarto 1000, 2500 con pioggia e 3000
-                    if (distance == 3 || distance == 6 || distance == 8) {
-                        continue;
-                    }
+            for (int dr = 0; dr <= 5; dr++) {
+                String path = String.format("data/parsed/SF%d.dat", 12 - dr);
+                try (PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter(path)))) {
 
-                    out.printf("%d\t", metres[distance]);
+                    for (int dist=0; dist<5; dist++) {
+                        out.printf("%d",distances[dist]);
 
-                    for (int power = 0; power<table[distance].length; power++) {
+                        for (int len=0; len<2; len++) {
+                            for (int pw=0; pw<5; pw++) {
+                                if (pw == 1) {
+                                    continue;
+                                }
 
-                        for (int codr=0; codr<table[distance][power].length; codr++) {
+                                Range range = configs[dist];
 
-                            //out.printf("%s_4/%d\t", pow.get(power), codr+5);
-
-                            out.printf("%d\t",table[distance][power][codr]); // save tx power
+                                if (pw != range.min && pw != range.max) {
+                                    out.printf("\t?%d", stats[dr][dist][len][pw]);
+                                } else {
+                                    out.printf("\t%d", stats[dr][dist][len][pw]);
+                                }
+                            }
                         }
-
-
+                        out.println();
                     }
 
-                    out.println();
-                }
 
-                out.println();
+
+                } catch(IOException e){
+                e.printStackTrace();
             }
+        }
 
-/*
 
-            out.printf("\t%d\t%d\t%d\t%d\t%d\t%d",dr.get("SF7BW125"),dr.get("SF8BW125"),dr.get("SF9BW125"),dr.get("SF10BW125"),dr.get("SF11BW125"),dr.get("SF12BW125")); // save datr
-            out.printf("\t%d\t%d\t%d\t%d\n",cr.get("4/5"),cr.get("4/6"),cr.get("4/7"), cr.get("4/8") ); // save codr
 
-            for (int j=0; j<drArray.length; j++) {
-                drByTx[j] += String.format("%d\t%d\t%d\t%d\t%d\t%d\n",drArray[j].get("SF7BW125"),drArray[j].get("SF8BW125"),drArray[j].get("SF9BW125"),drArray[j].get("SF10BW125"),drArray[j].get("SF11BW125"),drArray[j].get("SF12BW125"));
-            }
-*/
+
+
 
         } catch (IOException e) {
             e.printStackTrace();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
         }
     }
+
+
+    /**
+     * Entry point
+     * @param args
+     */
 
     public static void main(String[] args) {
         ParseData parseData = new ParseData();
