@@ -31,7 +31,7 @@ public class NetworkServerEnqueuer implements Runnable {
             fromAS = new BufferedReader(new InputStreamReader(socket.getInputStream(), StandardCharsets.US_ASCII));
         } catch (IOException e) {
             e.printStackTrace();
-            System.exit(-1);
+            System.exit(-1); // TODO: trovare un modo per cui non faccia crashare tutto il NS
         }
     }
 
