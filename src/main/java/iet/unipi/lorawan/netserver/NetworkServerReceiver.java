@@ -1,6 +1,7 @@
-package iet.unipi.lorawan;
+package iet.unipi.lorawan.netserver;
 
 
+import iet.unipi.lorawan.*;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -9,30 +10,36 @@ import java.io.OutputStreamWriter;
 import java.net.*;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.logging.*;
 
 public class NetworkServerReceiver implements Runnable {
 
     private static final int BUFFER_LEN = 2400;
+    private static final int MAX_SENDERS = 10;
+
+    // Logger
     private static final Logger activity = Logger.getLogger("Network Server Receiver: activity");
     private static final String ACTIVITY_FILE = "data/NS_receiver_activity.txt";
 
-    private final int port;
-    private final Map<String,LoraMote> motes;
+    // Data Structures
+    private final Map<String,Mote> motes;
     private final Map<String,InetSocketAddress> gateways;
     private final Map<String,Socket> appServers;
 
     // Socket UDP dal quale ricevo da tutti i gateway
     private final DatagramSocket gatewaySocket;
 
+    // Executor
+    private final ExecutorService senderExecutor = Executors.newFixedThreadPool(MAX_SENDERS);
+
     public NetworkServerReceiver(
             int port,
-            Map<String,LoraMote> motes,
+            Map<String,Mote> motes,
             Map<String,InetSocketAddress> gateways,
             Map<String,Socket> appServers
     ) {
-        this.port = port;
         this.motes = motes;
         this.gateways = gateways;
         this.appServers = appServers;
@@ -102,12 +109,12 @@ public class NetworkServerReceiver implements Runnable {
                                     continue;
                                 }
 
-                                long tmst = rxpk.getLong("tmst");
+                                long timestamp = rxpk.getLong("tmst");
 
                                 MACMessage mm = new MACMessage(rxpk.getString("data"));
                                 FrameMessage fm = new FrameMessage(mm);
 
-                                LoraMote mote = motes.get(fm.getDevAddress());
+                                Mote mote = motes.get(fm.getDevAddress());
 
                                 // Authentication => check mic
                                 if (!mm.checkIntegrity(mote)) {
@@ -126,7 +133,27 @@ public class NetworkServerReceiver implements Runnable {
                                         out.flush();
                                     }
 
-                                    // Unlock Sender
+
+                                    // Create sender task
+                                    Channel channel = new Channel(
+                                            rxpk.getDouble("freq"),
+                                            0,
+                                            27,
+                                            rxpk.getString("modu"),
+                                            rxpk.getString("datr"),
+                                            rxpk.getString("codr"),
+                                            false
+                                    );
+
+                                    if (!gateways.containsKey(gateway)) {
+                                        activity.severe("Gateway PULL_RESP address not found");
+                                    } else {
+                                        InetSocketAddress gw = gateways.get(gateway);
+                                        NetworkServerSender sender = new NetworkServerSender(mote,timestamp,channel,gw);
+
+                                        // Execute Sender
+                                        senderExecutor.submit(sender);
+                                    }
                                 }
                             }
                         }

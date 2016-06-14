@@ -1,7 +1,9 @@
-package iet.unipi.lorawan;
+package iet.unipi.lorawan.netserver;
 
 
-import org.bouncycastle.util.encoders.Hex;
+import iet.unipi.lorawan.FrameMessage;
+import iet.unipi.lorawan.Mote;
+import iet.unipi.lorawan.MACMessage;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
@@ -13,16 +15,15 @@ import java.util.Base64;
 import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 
-public class NetworkServerEnqueuer extends Thread {
+public class NetworkServerEnqueuer implements Runnable {
 
-    private final BlockingQueue<MACMessage> messages;
-    private final Map<String,LoraMote> motes; // Key must be devEUI
+
+    private final Map<String,Mote> motes; // Key must be devEUI
 
     private BufferedReader fromAS;
 
 
-    public NetworkServerEnqueuer(BlockingQueue<MACMessage> messages, Socket socket, Map<String, LoraMote> motes) {
-        this.messages = messages;
+    public NetworkServerEnqueuer(Socket socket, Map<String, Mote> motes) {
         this.motes = motes;
 
         // Init reader
@@ -46,7 +47,7 @@ public class NetworkServerEnqueuer extends Thread {
                 JSONObject msg = new JSONObject(line).getJSONObject("app");
                 JSONObject userdata = msg.getJSONObject("userdata");
                 String devEUI = msg.getString("moteeui");
-                LoraMote mote = motes.get(devEUI);
+                Mote mote = motes.get(devEUI);
                 byte[] payload = Base64.getDecoder().decode(userdata.getString("payload").getBytes());
 
                 MACMessage macMessage = new MACMessage(
@@ -64,7 +65,7 @@ public class NetworkServerEnqueuer extends Thread {
                 );
 
                 // Enqueue message
-                messages.put(macMessage);
+                mote.messages.put(macMessage);
 
             } catch (IOException e) {
                 e.printStackTrace();

@@ -1,5 +1,8 @@
-package iet.unipi.lorawan;
+package iet.unipi.lorawan.appserver;
 
+import iet.unipi.lorawan.Application;
+import iet.unipi.lorawan.Mote;
+import iet.unipi.lorawan.Util;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -88,12 +91,12 @@ public class ApplicationServer {
             String devEUI = mote.getString("deveui");
             String devAddr = mote.getString("devaddr");
 
-            // Creo un istanza di LoraMote e la aggiungo alla lista di motes
-            LoraMote newMote;
+            // Creo un istanza di Mote e la aggiungo alla lista di motes
+            Mote newMote;
 
             if (mote.getString("join").equals("OTA")) {
                 String appKey = mote.getString("appkey");
-                newMote = new LoraMote(
+                newMote = new Mote(
                         devEUI,
                         appEUI,
                         devAddr,
@@ -104,7 +107,7 @@ public class ApplicationServer {
             } else {
                 String netSessKey = mote.getString("netsesskey");
                 String appSessKey = mote.getString("appsesskey");
-                newMote = new LoraMote(
+                newMote = new Mote(
                         devEUI,
                         appEUI,
                         devAddr,
@@ -155,7 +158,7 @@ public class ApplicationServer {
             System.out.println("Applicazione: " + app.name);
             System.out.println("App EUI: " + Util.formatEUI(app.eui));
 
-            for (Map.Entry<String, LoraMote> entry1: app.motes.entrySet()) {
+            for (Map.Entry<String, Mote> entry1: app.motes.entrySet()) {
                 System.out.println(entry1.getValue().getDevAddress());
             }
         }

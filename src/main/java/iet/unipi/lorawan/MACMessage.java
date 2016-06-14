@@ -101,7 +101,7 @@ public class MACMessage {
      * @param mote
      */
 
-    public MACMessage(int type, FrameMessage frameMessage, LoraMote mote) {
+    public MACMessage(int type, FrameMessage frameMessage, Mote mote) {
         this.type = type & 0x7; // least significant three bits
         this.lorawanVersion = LORAWAN_1;
 
@@ -152,7 +152,7 @@ public class MACMessage {
 
 
 
-    public MACMessage(JoinAccept joinAccept, LoraMote mote) {
+    public MACMessage(JoinAccept joinAccept, Mote mote) {
         this.type = JOIN_ACCEPT;
         this.lorawanVersion = LORAWAN_1;
         this.dir = DOWNSTREAM;
@@ -183,7 +183,7 @@ public class MACMessage {
      * @return
      */
 
-    private byte[] computeMIC(LoraMote mote) {
+    private byte[] computeMIC(Mote mote) {
         int frameCounter = (this.dir == UPSTREAM) ? mote.frameCounterUp : mote.frameCounterDown;
         //System.out.println("MIC direction: " + this.dir + " , counter: " + frameCounter);
 
@@ -246,7 +246,7 @@ public class MACMessage {
      * @return
      */
 
-    public boolean checkIntegrity(LoraMote mote) {
+    public boolean checkIntegrity(Mote mote) {
         return Arrays.equals(this.MIC, this.computeMIC(mote));
     }
 

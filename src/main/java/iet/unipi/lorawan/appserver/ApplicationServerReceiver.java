@@ -1,7 +1,9 @@
-package iet.unipi.lorawan;
+package iet.unipi.lorawan.appserver;
+
+import iet.unipi.lorawan.Application;
+import iet.unipi.lorawan.Mote;
 
 import java.io.*;
-import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
@@ -18,7 +20,7 @@ public class ApplicationServerReceiver implements Runnable {
 
 
     private final byte[] eui;
-    private final Map<String,LoraMote> motes;
+    private final Map<String,Mote> motes;
 
 
     public ApplicationServerReceiver(Application application) {

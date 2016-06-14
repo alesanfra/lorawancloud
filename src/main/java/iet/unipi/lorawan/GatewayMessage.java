@@ -83,24 +83,25 @@ public class GatewayMessage {
         this.payload = payload;
     }
 
+
     /**
-     *
-     * @param imme if true data will be sent immediately
-     * @param tmst timestamp at which send data
-     * @param freq center frequency
-     * @param rfch antenna on which send data
-     * @param powe tx power in dB
-     * @param modu "LORA" or "FSK"
-     * @param datr data rate
-     * @param codr code rate
-     * @param ipol if true, invert polarity
-     * @param data frame to be sent
-     * @param ncrc if not false, disable crc
-     * @return
+     * @param version
+     * @param token
+     * @param type
+     * @param gateway
+     * @param imme
+     * @param tmst
+     * @param channel
+     * @param ipol
+     * @param data
      */
 
-    public static String getTxpk(
-            boolean imme, long tmst, double freq, int rfch, int powe, String modu, String datr, String codr, boolean ipol, byte[] data, boolean ncrc) {
+    public GatewayMessage(byte version, short token, byte type, byte[] gateway, boolean imme, long tmst, Channel channel, boolean ipol, byte[] data) {
+        this.version = version;
+        this.token = token;
+        this.type = type;
+        this.gateway = gateway;
+
         JSONObject txpk = new JSONObject();
 
         if (imme) {
@@ -109,23 +110,23 @@ public class GatewayMessage {
             txpk.put("tmst",tmst);
         }
 
-        txpk.put("freq",freq);
-        txpk.put("rfch",rfch);
-        txpk.put("powe",powe);
-        txpk.put("modu",modu);
-        txpk.put("datr",datr);
-        txpk.put("codr",codr);
+        txpk.put("freq",channel.freq);
+        txpk.put("rfch",channel.rfch);
+        txpk.put("powe",channel.power);
+        txpk.put("modu",channel.modu);
+        txpk.put("datr",channel.datr);
+        txpk.put("codr",channel.codr);
         txpk.put("ipol",ipol);
         txpk.put("size",data.length);
         String b64Data = Base64.getEncoder().encodeToString(data);
         txpk.put("data",b64Data);
-        txpk.put("ncrc",ncrc);
+        txpk.put("ncrc",channel.ncrc);
 
         JSONObject payload = new JSONObject();
         payload.put("txpk",txpk);
 
         //System.out.println(payload.toString());
-        return payload.toString().trim();
+        this.payload = payload.toString().trim();
     }
 
 

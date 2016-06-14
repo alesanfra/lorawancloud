@@ -1,5 +1,6 @@
 package iet.unipi.lorawan;
 
+import iet.unipi.lorawan.netserver.NetworkServerEvent;
 import org.bouncycastle.util.encoders.Hex;
 
 import java.security.SecureRandom;

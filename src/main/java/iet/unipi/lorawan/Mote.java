@@ -5,18 +5,19 @@ import org.bouncycastle.util.encoders.Hex;
 
 import javax.crypto.Cipher;
 import javax.crypto.spec.SecretKeySpec;
-import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.security.Key;
 import java.util.Arrays;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 
 
 /**
  * Describes a LoRa Mote
  */
 
-public class LoraMote {
+public class Mote {
     // LoRa mote attributes
     public final byte[] devEUI;
     public final byte[] appEUI;
@@ -28,6 +29,9 @@ public class LoraMote {
     public int frameCounterDown;
     public boolean rx1Enabled = true;
 
+    // Enqueued messages
+    public final BlockingQueue<MACMessage> messages = new LinkedBlockingQueue<>();
+
     /**
      * Standard constructor
      * @param devEUI
@@ -38,7 +42,7 @@ public class LoraMote {
      * @param appSessionKey
      */
 
-    public LoraMote(byte[] devEUI, byte[] appEUI, byte[] devAddress, byte[] appKey, byte[] netSessionKey, byte[] appSessionKey) {
+    public Mote(byte[] devEUI, byte[] appEUI, byte[] devAddress, byte[] appKey, byte[] netSessionKey, byte[] appSessionKey) {
         this.devEUI = devEUI;
         this.appEUI = appEUI;
         this.devAddress = devAddress;
@@ -60,7 +64,7 @@ public class LoraMote {
      * @param appSessionKey
      */
 
-    public LoraMote(String devEUI, String appEUI, String devAddress, String appKey, String netSessionKey, String appSessionKey) {
+    public Mote(String devEUI, String appEUI, String devAddress, String appKey, String netSessionKey, String appSessionKey) {
         byte[] dev_eui = Hex.decode(devEUI);
         ArrayUtils.reverse(dev_eui); // Store little endian
         this.devEUI = dev_eui;
@@ -88,7 +92,7 @@ public class LoraMote {
      * @param devAddress
      */
 
-    public LoraMote(byte[] devEUI, byte[] devAddress) {
+    public Mote(byte[] devEUI, byte[] devAddress) {
         this(devEUI,null,devAddress,null,null,null);
     }
 
@@ -200,10 +204,10 @@ public class LoraMote {
 
     @Override
     public boolean equals(Object o) {
-        if(!(o instanceof LoraMote)) {
+        if(!(o instanceof Mote)) {
             return false;
         }
-        LoraMote other = (LoraMote) o;
+        Mote other = (Mote) o;
 
         if (this.devAddress != null && other.devAddress != null) {
             return Arrays.equals(this.devAddress,other.devAddress);

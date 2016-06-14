@@ -1,5 +1,6 @@
 package iet.unipi.lorawan;
 
+import iet.unipi.lorawan.appserver.ApplicationServerReceiver;
 import org.bouncycastle.util.encoders.Hex;
 
 import java.net.Socket;
@@ -12,7 +13,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class Application {
     public final byte[] eui;
     public final String name;
-    public final Map<String,LoraMote> motes;
+    public final Map<String,Mote> motes;
 
     public Socket sockCS;
 
