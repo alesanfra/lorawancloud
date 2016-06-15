@@ -1,8 +1,8 @@
 package iet.unipi.lorawan.netserver;
 
 
-import iet.unipi.lorawan.FrameMessage;
-import iet.unipi.lorawan.MACMessage;
+import iet.unipi.lorawan.messages.FrameMessage;
+import iet.unipi.lorawan.messages.MACMessage;
 import iet.unipi.lorawan.Mote;
 import iet.unipi.lorawan.MoteCollection;
 import org.json.JSONObject;

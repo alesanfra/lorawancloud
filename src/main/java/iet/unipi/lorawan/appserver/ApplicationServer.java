@@ -1,6 +1,5 @@
 package iet.unipi.lorawan.appserver;
 
-import iet.unipi.lorawan.Application;
 import iet.unipi.lorawan.Mote;
 import iet.unipi.lorawan.Util;
 import org.json.JSONArray;

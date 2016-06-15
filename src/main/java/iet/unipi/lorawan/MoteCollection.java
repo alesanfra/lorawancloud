@@ -1,6 +1,5 @@
 package iet.unipi.lorawan;
 
-import org.jetbrains.annotations.NotNull;
 
 import java.util.Collection;
 import java.util.Map;
@@ -65,25 +64,23 @@ public class MoteCollection implements ConcurrentMap<String,Mote> {
 
     @Override
     public void clear() {
-
+        this.motesByAddress.clear();
+        this.euiToAddress.clear();
     }
 
-    @NotNull
     @Override
     public Set<String> keySet() {
-        return null;
+        return motesByAddress.keySet();
     }
 
-    @NotNull
     @Override
     public Collection<Mote> values() {
-        return null;
+        return motesByAddress.values();
     }
 
-    @NotNull
     @Override
     public Set<Entry<String, Mote>> entrySet() {
-        return null;
+        return motesByAddress.entrySet();
     }
 
     @Override
@@ -93,17 +90,37 @@ public class MoteCollection implements ConcurrentMap<String,Mote> {
 
     @Override
     public boolean remove(Object key, Object value) {
-        return false;
+        if (this.containsKey(key)) {
+            this.remove(key);
+            return true;
+        } else {
+            return false;
+        }
     }
 
     @Override
     public boolean replace(String key, Mote oldValue, Mote newValue) {
-        return false;
+        if (motesByAddress.replace(key,oldValue,newValue)) {
+            if (!oldValue.getDevEUI().equals(newValue.getDevEUI())) {
+                euiToAddress.remove(oldValue.getDevEUI());
+                euiToAddress.put(newValue.getDevEUI(),key);
+            }
+            return true;
+        } else {
+            return false;
+        }
     }
 
     @Override
     public Mote replace(String key, Mote value) {
-        return null;
+        Mote old = motesByAddress.replace(key,value);
+
+        if (old != null && !old.getDevEUI().equals(value.getDevEUI())) {
+            euiToAddress.remove(old.getDevEUI());
+            euiToAddress.put(value.getDevEUI(),key);
+        }
+
+        return old;
     }
 
 

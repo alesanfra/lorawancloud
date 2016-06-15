@@ -1,23 +1,19 @@
 package iet.unipi.lorawan.appserver;
 
-import iet.unipi.lorawan.Application;
 import iet.unipi.lorawan.Mote;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
-/**
- * Created by alessio on 11/05/16.
- */
 
 public class ApplicationServerReceiver implements Runnable {
 
-
+/*
     private final OutputStreamWriter toNS;
     private final InputStreamReader fromNS;
     private final OutputStreamWriter toCS;
-
+*/
 
     private final byte[] eui;
     private final Map<String,Mote> motes;
@@ -26,7 +22,7 @@ public class ApplicationServerReceiver implements Runnable {
     public ApplicationServerReceiver(Application application) {
         this.motes = application.motes;
         this.eui = application.eui;
-
+/*
 
         //this.sockNS = sockNS;
         OutputStream outputStream = null;
@@ -55,7 +51,7 @@ public class ApplicationServerReceiver implements Runnable {
             e.printStackTrace();
         } finally {
             toCS = new OutputStreamWriter(outputStream, StandardCharsets.US_ASCII);
-        }
+        }*/
 
     }
 

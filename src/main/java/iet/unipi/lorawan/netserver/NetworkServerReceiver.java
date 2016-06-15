@@ -2,6 +2,9 @@ package iet.unipi.lorawan.netserver;
 
 
 import iet.unipi.lorawan.*;
+import iet.unipi.lorawan.messages.FrameMessage;
+import iet.unipi.lorawan.messages.GatewayMessage;
+import iet.unipi.lorawan.messages.MACMessage;
 import org.json.JSONArray;
 import org.json.JSONObject;
 

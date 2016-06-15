@@ -1,12 +1,13 @@
 package iet.unipi.lorawan.netserver;
 
 import iet.unipi.lorawan.*;
+import iet.unipi.lorawan.messages.GatewayMessage;
+import iet.unipi.lorawan.messages.MACMessage;
 
 import java.io.*;
 import java.net.DatagramSocket;
 import java.net.InetSocketAddress;
 import java.net.SocketException;
-import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.*;
 
@@ -17,12 +18,9 @@ public class NetworkServerSender implements Runnable {
     private static final Channel rx2Channel;
     private static final boolean IPOL = true;
 
-    // Temporization of LoRaWAN downstream messages
+
     private static final int TIMEOUT = 2000; // RX_DELAY2
-    public static final long RECEIVE_DELAY1 = 1000000; // microsec
-    public static final long RECEIVE_DELAY2 = RECEIVE_DELAY1 + 1000000; // microsec
-    public static final long JOIN_ACCEPT_DELAY1 = 5000000;
-    public static final long JOIN_ACCEPT_DELAY2 = JOIN_ACCEPT_DELAY1 + 1000000;
+
 
 
     // Logger
@@ -108,7 +106,7 @@ public class NetworkServerSender implements Runnable {
                     GatewayMessage.PULL_RESP,
                     null,
                     false,
-                    timestamp + RECEIVE_DELAY1,
+                    timestamp + Constants.RECEIVE_DELAY1,
                     channel,
                     IPOL,
                     message.getBytes()
@@ -120,7 +118,7 @@ public class NetworkServerSender implements Runnable {
                     GatewayMessage.PULL_RESP,
                     null,
                     false,
-                    timestamp + RECEIVE_DELAY2,
+                    timestamp + Constants.RECEIVE_DELAY2,
                     rx2Channel,
                     IPOL,
                     message.getBytes()

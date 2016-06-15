@@ -1,4 +1,4 @@
-package iet.unipi.lorawan;
+package iet.unipi.lorawan.messages;
 
 import org.apache.commons.lang.ArrayUtils;
 import org.bouncycastle.util.encoders.Hex;

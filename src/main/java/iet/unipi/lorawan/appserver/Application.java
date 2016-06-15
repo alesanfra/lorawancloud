@@ -1,5 +1,6 @@
-package iet.unipi.lorawan;
+package iet.unipi.lorawan.appserver;
 
+import iet.unipi.lorawan.Mote;
 import iet.unipi.lorawan.appserver.ApplicationServerReceiver;
 import org.bouncycastle.util.encoders.Hex;
 

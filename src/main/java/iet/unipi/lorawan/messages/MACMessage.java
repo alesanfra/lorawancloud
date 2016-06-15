@@ -1,5 +1,8 @@
-package iet.unipi.lorawan;
+package iet.unipi.lorawan.messages;
 
+import iet.unipi.lorawan.Mote;
+import iet.unipi.lorawan.messages.FrameMessage;
+import iet.unipi.lorawan.messages.JoinAccept;
 import org.apache.commons.lang.ArrayUtils;
 import org.bouncycastle.crypto.engines.AESEngine;
 import org.bouncycastle.crypto.macs.CMac;

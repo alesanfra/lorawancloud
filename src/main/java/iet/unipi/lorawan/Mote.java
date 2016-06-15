@@ -1,5 +1,6 @@
 package iet.unipi.lorawan;
 
+import iet.unipi.lorawan.messages.MACMessage;
 import org.apache.commons.lang.ArrayUtils;
 import org.bouncycastle.util.encoders.Hex;
 
