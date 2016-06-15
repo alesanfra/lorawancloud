@@ -6,8 +6,9 @@ import java.util.logging.Formatter;
 import java.util.logging.LogRecord;
 
 /**
- * Created by alessio on 04/05/16.
+ * Format log by appending the record to a time stamp
  */
+
 public class SimpleDateFormatter extends Formatter {
 
     private static final int BUFFER_LEN = 300;
@@ -22,8 +23,8 @@ public class SimpleDateFormatter extends Formatter {
     }
 
     private String calcDate(long millisecs) {
-        SimpleDateFormat date_format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS  ");
-        Date resultdate = new Date(millisecs);
-        return date_format.format(resultdate);
+        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS  ");
+        Date date = new Date(millisecs);
+        return dateFormat.format(date);
     }
 }

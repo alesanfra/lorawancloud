@@ -24,7 +24,7 @@ public class NetworkServerReceiver implements Runnable {
     private static final String ACTIVITY_FILE = "data/NS_receiver_activity.txt";
 
     // Data Structures
-    private final Map<String,Mote> motes;
+    private final MoteCollection motes;
     private final Map<String,InetSocketAddress> gateways;
     private final Map<String,Socket> appServers;
 
@@ -36,7 +36,7 @@ public class NetworkServerReceiver implements Runnable {
 
     public NetworkServerReceiver(
             int port,
-            Map<String,Mote> motes,
+            MoteCollection motes,
             Map<String,InetSocketAddress> gateways,
             Map<String,Socket> appServers
     ) {
@@ -191,6 +191,22 @@ public class NetworkServerReceiver implements Runnable {
 
     private String createMessage(GatewayMessage gm, MACMessage mm, FrameMessage fm) {
         // TODO: implement message
+        JSONObject message = new JSONObject();
+
+        switch (mm.type) {
+            case MACMessage.JOIN_REQUEST:
+                activity.warning("JOIN REQUEST not implemented yet");
+                break;
+
+            case MACMessage.CONFIRMED_DATA_UP:
+            case MACMessage.UNCONFIRMED_DATA_UP:
+                activity.warning("DATA UP not implemented yet");
+                break;
+
+            default:
+                activity.warning("Unknown message type");
+        }
+
         return gm.payload;
     }
 }

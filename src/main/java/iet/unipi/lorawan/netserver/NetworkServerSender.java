@@ -16,8 +16,6 @@ public class NetworkServerSender implements Runnable {
     // TX Settings
     private static final Channel rx2Channel;
     private static final boolean IPOL = true;
-    private static final boolean NCRC = true;
-
 
     // Temporization of LoRaWAN downstream messages
     private static final int TIMEOUT = 2000; // RX_DELAY2
@@ -53,7 +51,6 @@ public class NetworkServerSender implements Runnable {
         this.channel = channel;
         this.gateway = gateway;
 
-
         // Init logger
         activity.setLevel(Level.INFO);
         FileHandler activityFile;
@@ -78,7 +75,7 @@ public class NetworkServerSender implements Runnable {
             socket = new DatagramSocket();
         } catch (SocketException e) {
             e.printStackTrace();
-            System.exit(-1);
+            //System.exit(-1);
         }
     }
 
@@ -132,7 +129,6 @@ public class NetworkServerSender implements Runnable {
 
         try {
             socket.send(response.getPacket(gateway));
-            mote.frameCounterDown++;
         } catch (IOException e) {
             e.printStackTrace();
         }

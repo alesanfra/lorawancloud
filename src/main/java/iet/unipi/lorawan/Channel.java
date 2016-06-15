@@ -1,5 +1,8 @@
 package iet.unipi.lorawan;
 
+/**
+ * A Channel object contains the settings to use in a downstream transmission
+ */
 
 public class Channel {
     public final double freq;

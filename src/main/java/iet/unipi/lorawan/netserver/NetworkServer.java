@@ -2,6 +2,7 @@ package iet.unipi.lorawan.netserver;
 
 import iet.unipi.lorawan.Constants;
 import iet.unipi.lorawan.Mote;
+import iet.unipi.lorawan.MoteCollection;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -20,12 +21,8 @@ import java.util.concurrent.Executors;
 
 public class NetworkServer {
 
-    private static final int MAX_THREADS = 50;
-    private final ExecutorService executor = Executors.newFixedThreadPool(MAX_THREADS);
-
-
     // Hashmap
-    private final Map<String,Mote> motes;
+    private final MoteCollection motes;
     private final Map<String,InetSocketAddress> gateways;
     private final Map<String,Socket> appServers;
 
@@ -35,18 +32,20 @@ public class NetworkServer {
      *      - allocate all the hasmaps
      *      - load from file the mote list
      *      - start receiver
+     *      - start listener
      */
 
     public NetworkServer() {
-
-        // Caricare motes da file
         this.motes = loadMotesFromFile(Constants.MOTES_CONF);
         this.gateways = new ConcurrentHashMap<>();
         this.appServers = new ConcurrentHashMap<>();
 
+        Thread listener = new Thread(new NetworkServerListener(
+                Constants.APPSERVER_LISTENING_PORT,
+                motes,
+                appServers
+        ));
 
-
-        // faccio partire il receiver
         Thread receiver = new Thread(new NetworkServerReceiver(
                 Constants.GATEWAYS_LISTENING_PORT,
                 motes,
@@ -54,9 +53,8 @@ public class NetworkServer {
                 appServers
         ));
 
+        listener.start();
         receiver.start();
-
-        //executor.execute(receiver);
     }
 
 
@@ -66,9 +64,9 @@ public class NetworkServer {
      * @return Hashmap with key == deviece addess and value == Mote
      */
 
-    private Map<String,Mote> loadMotesFromFile(String motesConf) {
+    private MoteCollection loadMotesFromFile(String motesConf) {
         String file = "{}";
-        Map<String, Mote> map = new ConcurrentHashMap<>();
+        MoteCollection map = new MoteCollection();
 
         // Read json from file
         try {

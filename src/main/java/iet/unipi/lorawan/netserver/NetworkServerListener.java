@@ -3,6 +3,7 @@ package iet.unipi.lorawan.netserver;
 
 import iet.unipi.lorawan.Constants;
 import iet.unipi.lorawan.Mote;
+import iet.unipi.lorawan.MoteCollection;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
@@ -13,6 +14,8 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class NetworkServerListener implements Runnable {
 
@@ -20,19 +23,15 @@ public class NetworkServerListener implements Runnable {
     private final ServerSocket listener;
 
     // Hashmap
-    private final Map<String,Mote> motes;
-    private final Map<String,InetSocketAddress> gateways;
+    private final MoteCollection motes;
     private final Map<String,Socket> appServers;
 
+    // Executors
+    private ExecutorService executor = Executors.newCachedThreadPool();
 
-    public NetworkServerListener(
-            int listeningPort,
-            Map<String, Mote> motes,
-            Map<String, InetSocketAddress> gateways,
-            Map<String, Socket> appServers
-    ) {
+
+    public NetworkServerListener(int listeningPort, MoteCollection motes, Map<String, Socket> appServers) {
         this.motes = motes;
-        this.gateways = gateways;
         this.appServers = appServers;
 
         // Creare socket listener
@@ -60,7 +59,9 @@ public class NetworkServerListener implements Runnable {
                 String appEUI = message.getString("appeui");
 
                 if (appEUI.length() != Constants.EUI_LENGTH) {
-                    break;
+                    // AppEUI not valid
+                    appSocket.close();
+                    continue;
                 }
 
                 Socket socket = appServers.get(appEUI);
@@ -68,27 +69,13 @@ public class NetworkServerListener implements Runnable {
                 if (socket != null && !socket.isClosed()) {
                     // Application was already registered, reject connection
                     appSocket.close();
-                    break;
+                    continue;
                 }
 
-                // Save socket - TODO: controllare che non ci sia già e gestire
                 appServers.put(appEUI,appSocket);
 
-                // Start DownstreamForwarder
-
-                /*
-                Thread sender = new Thread(new NetworkServerSender(
-                        motes,
-                        gateways,
-                        appSocket
-                ));
-
-                // E' inutile executor perché nel caso d'uso std un thread parte e non si ferma più
-                executor.execute(sender);
-
-                // Così sono sicuro che parte
-                sender.start();*/
-
+                // Start Enqueuer
+                executor.execute(new NetworkServerEnqueuer(appSocket,motes));
             } catch (IOException e) {
                 e.printStackTrace();
             }

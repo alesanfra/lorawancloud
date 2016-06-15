@@ -2,8 +2,9 @@ package iet.unipi.lorawan.netserver;
 
 
 import iet.unipi.lorawan.FrameMessage;
-import iet.unipi.lorawan.Mote;
 import iet.unipi.lorawan.MACMessage;
+import iet.unipi.lorawan.Mote;
+import iet.unipi.lorawan.MoteCollection;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
@@ -12,18 +13,16 @@ import java.io.InputStreamReader;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
-import java.util.Map;
-import java.util.concurrent.BlockingQueue;
 
 public class NetworkServerEnqueuer implements Runnable {
 
 
-    private final Map<String,Mote> motes; // Key must be devEUI
+    private final MoteCollection motes; // Key must be devEUI
 
     private BufferedReader fromAS;
 
 
-    public NetworkServerEnqueuer(Socket socket, Map<String, Mote> motes) {
+    public NetworkServerEnqueuer(Socket socket, MoteCollection motes) {
         this.motes = motes;
 
         // Init reader
@@ -31,7 +30,7 @@ public class NetworkServerEnqueuer implements Runnable {
             fromAS = new BufferedReader(new InputStreamReader(socket.getInputStream(), StandardCharsets.US_ASCII));
         } catch (IOException e) {
             e.printStackTrace();
-            System.exit(-1); // TODO: trovare un modo per cui non faccia crashare tutto il NS
+            //System.exit(-1); // TODO: trovare un modo per cui non faccia crashare tutto il NS
         }
     }
 
@@ -47,7 +46,7 @@ public class NetworkServerEnqueuer implements Runnable {
                 JSONObject msg = new JSONObject(line).getJSONObject("app");
                 JSONObject userdata = msg.getJSONObject("userdata");
                 String devEUI = msg.getString("moteeui");
-                Mote mote = motes.get(devEUI);
+                Mote mote = motes.getByEui(devEUI);
                 byte[] payload = Base64.getDecoder().decode(userdata.getString("payload").getBytes());
 
                 MACMessage macMessage = new MACMessage(
@@ -66,6 +65,7 @@ public class NetworkServerEnqueuer implements Runnable {
 
                 // Enqueue message
                 mote.messages.put(macMessage);
+                mote.frameCounterDown++;
 
             } catch (IOException e) {
                 e.printStackTrace();
