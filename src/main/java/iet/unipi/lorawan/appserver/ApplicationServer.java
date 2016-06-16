@@ -1,5 +1,6 @@
 package iet.unipi.lorawan.appserver;
 
+import iet.unipi.lorawan.Constants;
 import iet.unipi.lorawan.Mote;
 import iet.unipi.lorawan.Util;
 import org.json.JSONArray;
@@ -10,6 +11,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -28,21 +30,14 @@ public class ApplicationServer {
     public static final String APPS_CONF = "conf/apps.json";
     public static final String MOTES_CONF = "conf/motes.json";
 
-    private static final int MAX_THREADS = 10;
-    private static final int APPSERVER_LISTENING_PORT = 55667;
+    private static final int MAX_THREADS = 50;
 
     private final Map<String, Application> apps;
     private final ExecutorService executor = Executors.newFixedThreadPool(MAX_THREADS);
 
-    // Sockets
-    private final ServerSocket listener;
-
 
     public ApplicationServer() {
-        // Caricare applicazioni da file
         this.apps = loadAppsFromFile(APPS_CONF);
-
-        // Caricare Mote da file ed assegnarli alla propria applicazione
         loadMotesFromFile(MOTES_CONF);
 
         /**
@@ -52,19 +47,22 @@ public class ApplicationServer {
          * c.
          */
 
-        for (Map.Entry<String, Application> entry: apps.entrySet()) {
-            Application app = entry.getValue();
-            //app.receiver = new ApplicationServerReceiver(app);
-            //executor.execute(app.receiver);
-        }
+        for (Application app: apps.values()) {
+            try {
+                Socket socket = new Socket(Constants.NETSERVER_ADDRESS, Constants.NETSERVER_LISTENING_PORT);
+                app.socket = socket;
 
-        ServerSocket serverSocket = null;
-        try {
-            serverSocket = new ServerSocket(APPSERVER_LISTENING_PORT);
-        } catch (IOException e) {
-            e.printStackTrace();
-        } finally {
-            listener = serverSocket;
+                app.sender = new ApplicationServerSender();
+                app.receiver = new ApplicationServerReceiver(app);
+
+                executor.execute(app.sender);
+                executor.execute(app.receiver);
+
+            } catch (UnknownHostException e) {
+                e.printStackTrace();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
 
     }
@@ -163,36 +161,8 @@ public class ApplicationServer {
         }
     }
 
-    public void run() {
-        testAS();
-
-        while (true) {
-            try (
-                    Socket customer = listener.accept();
-                    BufferedReader in = new BufferedReader(new InputStreamReader(customer.getInputStream(), StandardCharsets.US_ASCII));
-            ) {
-                String line = in.readLine();
-
-                // Leggo a quale applicazione vuole registrarsi
-                JSONObject message = new JSONObject(line);
-                String appEUI = message.getString("appeui");
-
-                Application app = apps.get(appEUI);
-
-                // Salvo il socket
-                app.sockCS = customer;
-
-                // Faccio partire il tread Receiver
-                ApplicationServerSender sender;
-
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-    }
 
     public static void main(String[] args) {
         ApplicationServer applicationServer = new ApplicationServer();
-        applicationServer.run();
     }
 }

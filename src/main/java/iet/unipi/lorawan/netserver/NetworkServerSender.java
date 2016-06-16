@@ -17,27 +17,20 @@ public class NetworkServerSender implements Runnable {
     // TX Settings
     private static final Channel rx2Channel;
     private static final boolean IPOL = true;
-
-
     private static final int TIMEOUT = 2000; // RX_DELAY2
-
-
 
     // Logger
     private static final Logger activity = Logger.getLogger("Network Server Downstream Forwarder: activity");
     private static final String ACTIVITY_FILE = "data/NS_downstream_forwarder_activity.txt";
 
     // Data structures
-    private final Mote mote; // key must be devEUI
+    private final Mote mote;
     private final long timestamp;
     private final Channel channel;
     private final InetSocketAddress gateway;
 
     // UDP socket to gateway
     private DatagramSocket socket;
-
-    // Executor
-
 
     static {
         rx2Channel = new Channel(869.525,0,27,"LORA","SF12BW125","4/5",true);

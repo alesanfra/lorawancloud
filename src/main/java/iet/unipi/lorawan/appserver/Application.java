@@ -8,16 +8,16 @@ import java.net.Socket;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-/**
- * Created by alessio on 12/05/16.
- */
+
 public class Application {
     public final byte[] eui;
     public final String name;
+
+    public Socket socket;
+
     public final Map<String,Mote> motes;
 
-    public Socket sockCS;
-
+    public ApplicationServerSender sender;
     public ApplicationServerReceiver receiver;
 
     public Application(String eui, String name) {

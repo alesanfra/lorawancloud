@@ -5,6 +5,7 @@ import iet.unipi.lorawan.*;
 import iet.unipi.lorawan.messages.FrameMessage;
 import iet.unipi.lorawan.messages.GatewayMessage;
 import iet.unipi.lorawan.messages.MACMessage;
+import org.bouncycastle.util.encoders.Hex;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -31,7 +32,7 @@ public class NetworkServerReceiver implements Runnable {
     private final Map<String,InetSocketAddress> gateways;
     private final Map<String,Socket> appServers;
 
-    // Socket UDP dal quale ricevo da tutti i gateway
+    // UDP socket
     private final DatagramSocket gatewaySocket;
 
     // Executor
@@ -130,7 +131,7 @@ public class NetworkServerReceiver implements Runnable {
                                 if (toAS == null) {
                                     activity.warning("App server NOT found");
                                 } else {
-                                    String message = createMessage(gm,mm,fm);
+                                    String message = createMessage(new String(Hex.encode(gm.gateway)),rxpk,mm,fm);
                                     try(OutputStreamWriter out = new OutputStreamWriter(toAS.getOutputStream(), StandardCharsets.US_ASCII)) {
                                         out.write(message);
                                         out.flush();
@@ -192,8 +193,7 @@ public class NetworkServerReceiver implements Runnable {
 
     }
 
-    private String createMessage(GatewayMessage gm, MACMessage mm, FrameMessage fm) {
-        // TODO: implement message
+    private String createMessage(String gateway, JSONObject rxpk, MACMessage mm, FrameMessage fm) {
         JSONObject message = new JSONObject();
 
         switch (mm.type) {
@@ -202,14 +202,47 @@ public class NetworkServerReceiver implements Runnable {
                 break;
 
             case MACMessage.CONFIRMED_DATA_UP:
-            case MACMessage.UNCONFIRMED_DATA_UP:
+            case MACMessage.UNCONFIRMED_DATA_UP: {
                 activity.warning("DATA UP not implemented yet");
-                break;
+                JSONObject userdata = new JSONObject();
+                userdata.put("seqno",fm.counter);
+                userdata.put("port",fm.port);
+                userdata.put("payload",fm.payload);
 
+                JSONObject motetx = new JSONObject();
+                motetx.put("freq",rxpk.getInt("freq"));
+                motetx.put("modu",rxpk.getString("modu"));
+                motetx.put("codr",rxpk.getString("codr"));
+                motetx.put("adr", (fm.control & 0x80) > 0);
+
+                userdata.put("motetx",motetx);
+
+                JSONObject gwrx = new JSONObject();
+                gwrx.put("eui",gateway);
+                gwrx.put("time", rxpk.getString("time"));
+                gwrx.put("timefromgateway",true);
+                gwrx.put("chan",rxpk.getInt("chan"));
+                gwrx.put("rfch",rxpk.getInt("rfch"));
+                gwrx.put("rssi",rxpk.getInt("rssi"));
+                gwrx.put("lsnr",rxpk.getInt("lsnr"));
+
+                JSONArray gwrxArray = new JSONArray();
+                gwrxArray.put(gwrx);
+
+                JSONObject app = new JSONObject();
+                app.put("moteeui",motes.get(fm.getDevAddress()).getDevEUI().toLowerCase());
+                app.put("dir","up");
+                app.put("userdata",userdata);
+                app.put("gwrx",gwrxArray);
+
+                message.put("app",app);
+
+                break;
+            }
             default:
                 activity.warning("Unknown message type");
         }
 
-        return gm.payload;
+        return message.toString();
     }
 }

@@ -1,6 +1,6 @@
 package iet.unipi.lorawan.messages;
 
-import iet.unipi.lorawan.Channel;
+import iet.unipi.lorawan.netserver.Channel;
 import org.json.JSONObject;
 
 import java.net.DatagramPacket;

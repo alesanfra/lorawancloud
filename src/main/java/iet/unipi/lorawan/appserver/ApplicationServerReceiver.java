@@ -16,11 +16,11 @@ public class ApplicationServerReceiver implements Runnable {
 */
 
     private final byte[] eui;
-    private final Map<String,Mote> motes;
+    //private final Map<String,Mote> motes;
 
 
     public ApplicationServerReceiver(Application application) {
-        this.motes = application.motes;
+        //this.motes = application.motes;
         this.eui = application.eui;
 /*
 

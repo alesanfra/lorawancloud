@@ -1,4 +1,4 @@
-package iet.unipi.lorawan;
+package iet.unipi.lorawan.netserver;
 
 /**
  * A Channel object contains the settings to use in a downstream transmission

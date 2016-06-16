@@ -15,8 +15,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 
 public class NetworkServer {
@@ -41,7 +39,7 @@ public class NetworkServer {
         this.appServers = new ConcurrentHashMap<>();
 
         Thread listener = new Thread(new NetworkServerListener(
-                Constants.APPSERVER_LISTENING_PORT,
+                Constants.NETSERVER_LISTENING_PORT,
                 motes,
                 appServers
         ));
