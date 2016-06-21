@@ -29,18 +29,8 @@ public class NetworkServerSender implements Runnable {
     private final Channel channel;
     private final InetSocketAddress gateway;
 
-    // UDP socket to gateway
-    private DatagramSocket socket;
-
     static {
         rx2Channel = new Channel(869.525,0,27,"LORA","SF12BW125","4/5",true);
-    }
-
-    public NetworkServerSender(Mote mote, long timestamp, Channel channel, InetSocketAddress gateway) {
-        this.mote = mote;
-        this.timestamp = timestamp;
-        this.channel = channel;
-        this.gateway = gateway;
 
         // Init logger
         activity.setLevel(Level.INFO);
@@ -59,20 +49,28 @@ public class NetworkServerSender implements Runnable {
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
 
-
-        // Init datagram socket
-        try {
-            socket = new DatagramSocket();
-        } catch (SocketException e) {
-            e.printStackTrace();
-            //System.exit(-1);
-        }
+    public NetworkServerSender(Mote mote, long timestamp, Channel channel, InetSocketAddress gateway) {
+        this.mote = mote;
+        this.timestamp = timestamp;
+        this.channel = channel;
+        this.gateway = gateway;
     }
 
 
     @Override
     public void run() {
+        // UDP socket to gateway
+        DatagramSocket socket;
+
+        // Init datagram socket TODO: is it efficent?
+        try {
+            socket = new DatagramSocket();
+        } catch (SocketException e) {
+            e.printStackTrace();
+            return;
+        }
 
         // Wait message to send
         MACMessage message = null;
