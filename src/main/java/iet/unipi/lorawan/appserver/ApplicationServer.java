@@ -52,7 +52,7 @@ public class ApplicationServer {
                 Socket socket = new Socket(Constants.NETSERVER_ADDRESS, Constants.NETSERVER_LISTENING_PORT);
                 app.socket = socket;
 
-                app.sender = new ApplicationServerSender();
+                app.sender = new ApplicationServerSender(app);
                 app.receiver = new ApplicationServerReceiver(app);
 
                 executor.execute(app.sender);

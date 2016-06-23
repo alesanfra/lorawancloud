@@ -15,13 +15,11 @@ public class ApplicationServerReceiver implements Runnable {
     private final OutputStreamWriter toCS;
 */
 
-    private final byte[] eui;
-    //private final Map<String,Mote> motes;
+    private final Application application;
 
 
     public ApplicationServerReceiver(Application application) {
-        //this.motes = application.motes;
-        this.eui = application.eui;
+        this.application = application;
 /*
 
         //this.sockNS = sockNS;
