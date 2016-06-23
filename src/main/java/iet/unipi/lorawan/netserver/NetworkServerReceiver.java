@@ -38,6 +38,28 @@ public class NetworkServerReceiver implements Runnable {
     // Executor
     private final ExecutorService senderExecutor = Executors.newFixedThreadPool(MAX_SENDERS);
 
+
+    static {
+        // Init logger
+        activity.setLevel(Level.INFO);
+        FileHandler activityFile = null;
+        try {
+            activityFile = new FileHandler(ACTIVITY_FILE, true);
+        } catch (IOException e) {
+            e.printStackTrace();
+        } finally {
+            activityFile.setFormatter(new SimpleDateFormatter());
+            activity.addHandler(activityFile);
+        }
+
+        // Change ConsoleHandler behavior
+        for (Handler handler: Logger.getLogger("").getHandlers()) {
+            if (handler instanceof ConsoleHandler) {
+                handler.setFormatter(new SimpleDateFormatter());
+            }
+        }
+    }
+
     public NetworkServerReceiver(
             int port,
             MoteCollection motes,
@@ -58,26 +80,6 @@ public class NetworkServerReceiver implements Runnable {
         } finally {
             gatewaySocket = socket;
             activity.info("Listening to: " + gatewaySocket.getLocalAddress().getHostAddress() + " : " + gatewaySocket.getLocalPort());
-        }
-
-
-        // Init logger
-        activity.setLevel(Level.INFO);
-        FileHandler activityFile = null;
-        try {
-            activityFile = new FileHandler(ACTIVITY_FILE, true);
-        } catch (IOException e) {
-            e.printStackTrace();
-        } finally {
-            activityFile.setFormatter(new SimpleDateFormatter());
-            activity.addHandler(activityFile);
-        }
-
-        // Change ConsoleHandler behavior
-        for (Handler handler: Logger.getLogger("").getHandlers()) {
-            if (handler instanceof ConsoleHandler) {
-                handler.setFormatter(new SimpleDateFormatter());
-            }
         }
     }
 
@@ -153,7 +155,8 @@ public class NetworkServerReceiver implements Runnable {
                                         activity.severe("Gateway PULL_RESP address not found");
                                     } else {
                                         InetSocketAddress gw = gateways.get(gateway);
-                                        NetworkServerSender sender = new NetworkServerSender(mote,timestamp,channel,gw);
+                                        boolean ack = (mm.type == MACMessage.CONFIRMED_DATA_UP);
+                                        NetworkServerSender sender = new NetworkServerSender(mote, timestamp, ack, channel,gw);
 
                                         // Execute Sender
                                         senderExecutor.submit(sender);

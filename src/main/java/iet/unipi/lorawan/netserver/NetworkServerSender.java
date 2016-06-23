@@ -26,6 +26,7 @@ public class NetworkServerSender implements Runnable {
     // Data structures
     private final Mote mote;
     private final long timestamp;
+    private final boolean ack;
     private final Channel channel;
     private final InetSocketAddress gateway;
 
@@ -51,9 +52,10 @@ public class NetworkServerSender implements Runnable {
         }
     }
 
-    public NetworkServerSender(Mote mote, long timestamp, Channel channel, InetSocketAddress gateway) {
+    public NetworkServerSender(Mote mote, long timestamp, boolean ack, Channel channel, InetSocketAddress gateway) {
         this.mote = mote;
         this.timestamp = timestamp;
+        this.ack = ack;
         this.channel = channel;
         this.gateway = gateway;
     }

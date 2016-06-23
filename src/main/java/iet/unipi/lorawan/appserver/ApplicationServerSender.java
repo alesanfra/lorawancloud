@@ -1,15 +1,23 @@
 package iet.unipi.lorawan.appserver;
 
 
+import iet.unipi.lorawan.SimpleDateFormatter;
+
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
 import java.nio.charset.StandardCharsets;
+import java.util.logging.*;
 
 public class ApplicationServerSender implements Runnable {
 
     private final Application application;
-    private final OutputStreamWriter netServer;
+    private final PrintWriter netServer;
+
+    // Logger
+    private static final Logger activity = Logger.getLogger("Application Server Sender: activity");
+    private static final String ACTIVITY_FILE = "data/AS_sender_activity.txt";
 
     public ApplicationServerSender(Application application) {
         this.application = application;
@@ -20,22 +28,40 @@ public class ApplicationServerSender implements Runnable {
         } catch (IOException e) {
             e.printStackTrace();
         } finally {
-            netServer = new OutputStreamWriter(outputStream, StandardCharsets.US_ASCII);
+            netServer = new PrintWriter(new OutputStreamWriter(outputStream, StandardCharsets.US_ASCII));
+        }
+    }
+
+    static {
+        // Init logger
+        activity.setLevel(Level.INFO);
+        FileHandler activityFile = null;
+        try {
+            activityFile = new FileHandler(ACTIVITY_FILE, true);
+        } catch (IOException e) {
+            e.printStackTrace();
+        } finally {
+            activityFile.setFormatter(new SimpleDateFormatter());
+            activity.addHandler(activityFile);
+        }
+
+        // Change ConsoleHandler behavior
+        for (Handler handler: Logger.getLogger("").getHandlers()) {
+            if (handler instanceof ConsoleHandler) {
+                handler.setFormatter(new SimpleDateFormatter());
+            }
         }
     }
 
     @Override
     public void run() {
-
-        while (true) {
-            try {
+        try {
+            while (true) {
                 DownstreamMessage message = application.messages.take();
-                netServer.write(message.toJSONString());
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            } catch (IOException e) {
-                e.printStackTrace();
+                netServer.println(message.toJSONString());
             }
+        } catch (InterruptedException e) {
+            e.printStackTrace();
         }
     }
 }
