@@ -131,7 +131,6 @@ public class NetworkServerReceiver implements Runnable {
                                         out.flush();
                                     }
 
-
                                     // Create sender task
                                     Channel channel = new Channel(
                                             rxpk.getDouble("freq"),
@@ -148,10 +147,9 @@ public class NetworkServerReceiver implements Runnable {
                                     } else {
                                         InetSocketAddress gw = gateways.get(gateway);
                                         boolean ack = (mm.type == MACMessage.CONFIRMED_DATA_UP);
-                                        NetworkServerSender sender = new NetworkServerSender(mote, timestamp, ack, channel, gw);
 
                                         // Execute Sender
-                                        senderExecutor.submit(sender);
+                                        senderExecutor.submit(new NetworkServerMoteHandler(mote, timestamp, ack, channel, gw));
                                     }
                                 }
                             }

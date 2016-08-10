@@ -15,7 +15,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.logging.*;
 
 
-public class NetworkServerSender implements Runnable {
+public class NetworkServerMoteHandler implements Runnable {
 
     // TX Settings
     private static final Channel rx2Channel;
@@ -55,7 +55,7 @@ public class NetworkServerSender implements Runnable {
         }
     }
 
-    public NetworkServerSender(Mote mote, long timestamp, boolean ack, Channel channel, InetSocketAddress gateway) {
+    public NetworkServerMoteHandler(Mote mote, long timestamp, boolean ack, Channel channel, InetSocketAddress gateway) {
         this.mote = mote;
         this.timestamp = timestamp;
         this.ack = ack;

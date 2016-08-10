@@ -28,19 +28,10 @@ public class NetworkServerListener implements Runnable {
     private ExecutorService executor = Executors.newCachedThreadPool();
 
 
-    public NetworkServerListener(int listeningPort, MoteCollection motes, Map<String, Socket> appServers) {
+    public NetworkServerListener(int port, MoteCollection motes, Map<String, Socket> appServers) throws IOException {
         this.motes = motes;
         this.appServers = appServers;
-
-        // Creare socket listener
-        ServerSocket serverSocket = null;
-        try {
-            serverSocket = new ServerSocket(listeningPort);
-        } catch (IOException e) {
-            e.printStackTrace();
-        } finally {
-            listener = serverSocket;
-        }
+        this.listener = new ServerSocket(port);
     }
 
     @Override
@@ -73,7 +64,14 @@ public class NetworkServerListener implements Runnable {
                 appServers.put(appEUI,appSocket);
 
                 // Start Enqueuer
-                executor.execute(new NetworkServerEnqueuer(appSocket,motes));
+                try {
+                    executor.execute(new NetworkServerEnqueuer(appSocket,motes));
+                } catch (IOException e) {
+                    e.printStackTrace();
+                    appServers.remove(appEUI);
+                    appSocket.close();
+                }
+
             } catch (IOException e) {
                 e.printStackTrace();
             }
