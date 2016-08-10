@@ -31,7 +31,7 @@ public class Mote {
     public boolean rx1Enabled = true;
 
     // Enqueued messages
-    public final BlockingQueue<MACMessage> messages = new LinkedBlockingQueue<>();
+    public final BlockingQueue<String> messages = new LinkedBlockingQueue<>();
 
     /**
      * Standard constructor

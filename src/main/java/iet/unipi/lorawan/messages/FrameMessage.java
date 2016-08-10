@@ -9,12 +9,15 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.security.Key;
 import java.util.Arrays;
+import java.util.logging.Logger;
 
 /**
  * Frame Layer Message
  */
 
 public class FrameMessage {
+
+    private static final Logger log = Logger.getLogger("Frame Message log");
 
     public static final int HEADER_LEN = 7;
     public static final int UPSTREAM = 0;
@@ -29,13 +32,13 @@ public class FrameMessage {
     public final byte[] devAddress;
     public final byte control;
     public final short counter;
-    public final int optLen;
+    //public final int optLen;
     public final byte[] options;
     public final byte port;
     public final byte[] payload;
     public final byte dir;
 
-    public MACMessage macMessage;
+    //public MACMessage macMessage;
 
 
     /**
@@ -52,35 +55,36 @@ public class FrameMessage {
     public FrameMessage(byte[] devAddress, byte control, short counter, byte[] options, int port, byte[] payload, int dir) {
 
         // Check options
-        if (options != null && options.length > 15) {
-            this.options = null;
-            System.err.println("Options array too long");
+        if (options == null) {
+            this.options = new byte[0];
+        } else if (options.length > 15) {
+            this.options = new byte[0];
+            log.warning("Options array too long");
         } else {
             this.options = options;
         }
-        this.optLen = (this.options != null) ? this.options.length : 0;
 
         // Initialize device address
         if (devAddress == null) {
-            System.err.println("devAddress is null, Device address set to 00000000");
+            log.warning("devAddress is null, Device address set to 00000000");
             this.devAddress = Hex.decode("00000000");
         } else if (devAddress.length < 4) {
             this.devAddress = new byte[4];
             System.arraycopy(devAddress,0,this.devAddress,0,devAddress.length);
-            System.err.printf("devAddress len is %d, Device Address set to %s", devAddress.length, new String(Hex.encode(this.devAddress)));
+            log.warning(String.format("devAddress len is %d, Device Address set to %s", devAddress.length, new String(Hex.encode(this.devAddress))));
         } else if (devAddress.length > 4) {
             this.devAddress = new byte[4];
             System.arraycopy(devAddress,0,this.devAddress,0,4);
-            System.err.printf("devAddress len is %d, Device Address set to %s", devAddress.length, new String(Hex.encode(this.devAddress)));
+            log.warning(String.format("devAddress len is %d, Device Address set to %s", devAddress.length, new String(Hex.encode(this.devAddress))));
         } else {
             this.devAddress = devAddress;
         }
 
         // Initialize other fields
-        this.control = (byte) ((control & 0xF0) + this.optLen);
+        this.control = (byte) ((control & 0xF0) + this.options.length);
         this.counter = counter;
         this.port = (byte) (port & 0xFF);
-        this.payload = payload;
+        this.payload = (payload == null) ? new byte[0] : payload;
         this.dir = (byte) (dir & 0x1);
     }
 
@@ -98,22 +102,22 @@ public class FrameMessage {
         this.devAddress = Arrays.copyOfRange(data, 0, 4);
         this.control = bb.get(4);
         this.counter = bb.getShort(5);
-        this.optLen = control & 0xF;
+        int optLen = control & 0xF;
 
-        if (this.optLen > 0) {
-            this.options = Arrays.copyOfRange(data, 7, 7+this.optLen);
+        if (optLen > 0) {
+            this.options = Arrays.copyOfRange(data, 7, 7+optLen);
         } else {
-            this.options = null;
+            this.options = new byte[0];
         }
         
-        if (data.length > 7+this.optLen) {
-            this.port = bb.get(7+this.optLen);
-            this.payload = Arrays.copyOfRange(data, 8+this.optLen, data.length);
+        if (data.length > 7 + optLen) {
+            this.port = bb.get(7 + optLen);
+            this.payload = Arrays.copyOfRange(data, 8 + optLen, data.length);
         } else {
             this.port = 0;
-            this.payload = null;
+            this.payload = new byte[0];
         }
-        this.macMessage = macMessage;
+        //this.macMessage = macMessage;
     }
 
 
@@ -185,6 +189,15 @@ public class FrameMessage {
 
     public int getAck() {
         return (this.control & 0x20) >> 5;
+    }
+
+    public boolean getAdr() {
+        if ((this.control & 0x80) > 0) {
+            return true;
+        }
+        else {
+            return false;
+        }
     }
 
 

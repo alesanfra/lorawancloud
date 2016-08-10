@@ -42,14 +42,12 @@ public class NetworkServerReceiver implements Runnable {
     static {
         // Init logger
         activity.setLevel(Level.INFO);
-        FileHandler activityFile = null;
         try {
-            activityFile = new FileHandler(ACTIVITY_FILE, true);
-        } catch (IOException e) {
-            e.printStackTrace();
-        } finally {
+            FileHandler activityFile = new FileHandler(ACTIVITY_FILE, true);
             activityFile.setFormatter(new SimpleDateFormatter());
             activity.addHandler(activityFile);
+        } catch (IOException e) {
+            e.printStackTrace();
         }
 
         // Change ConsoleHandler behavior
@@ -65,31 +63,23 @@ public class NetworkServerReceiver implements Runnable {
             MoteCollection motes,
             Map<String,InetSocketAddress> gateways,
             Map<String,Socket> appServers
-    ) {
+    ) throws SocketException {
         this.motes = motes;
         this.gateways = gateways;
         this.appServers = appServers;
 
-        // Init datagram socket
-        DatagramSocket socket = null;
-        try {
-            socket = new DatagramSocket(port);
-        } catch (SocketException e) {
-            e.printStackTrace();
-            System.exit(-1);
-        } finally {
-            gatewaySocket = socket;
-            activity.info("Listening to: " + gatewaySocket.getLocalAddress().getHostAddress() + " : " + gatewaySocket.getLocalPort());
-        }
+        gatewaySocket = new DatagramSocket(port);
+        activity.info("Listening to: " + gatewaySocket.getLocalAddress().getHostAddress() + " : " + gatewaySocket.getLocalPort());
     }
 
 
     @Override
     public void run() {
         try {
+            byte[] buffer = new byte[BUFFER_LEN];
             while (true) {
                 // Receive UDP packet and create GWMP data structure
-                DatagramPacket packet = new DatagramPacket(new byte[BUFFER_LEN], BUFFER_LEN);
+                DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
                 gatewaySocket.receive(packet);
                 long receiveTime = System.nanoTime();
                 GatewayMessage gm = new GatewayMessage(packet.getData());
@@ -98,10 +88,12 @@ public class NetworkServerReceiver implements Runnable {
                 switch (gm.type) {
                     case GatewayMessage.PUSH_DATA:
                         activity.info("PUSH_DATA received from: " + packet.getAddress().getHostAddress() + ", Gateway: " + gateway);
+
+                        // Send PUSH_ACK to gateway
                         GatewayMessage pushAck = new GatewayMessage(GatewayMessage.GWMP_V1, gm.token, GatewayMessage.PUSH_ACK, null, null);
                         gatewaySocket.send(pushAck.getPacket((InetSocketAddress) packet.getSocketAddress()));
 
-
+                        // Load JSON
                         JSONObject jsonPayload = new JSONObject(gm.payload);
 
                         if (!jsonPayload.isNull("rxpk")) {
@@ -133,7 +125,7 @@ public class NetworkServerReceiver implements Runnable {
                                 if (toAS == null) {
                                     activity.warning("App server NOT found");
                                 } else {
-                                    String message = createMessage(new String(Hex.encode(gm.gateway)),rxpk,mm,fm);
+                                    String message = createMessage(new String(Hex.encode(gm.gateway)),rxpk,mm.type,fm);
                                     try(OutputStreamWriter out = new OutputStreamWriter(toAS.getOutputStream(), StandardCharsets.US_ASCII)) {
                                         out.write(message);
                                         out.flush();
@@ -156,7 +148,7 @@ public class NetworkServerReceiver implements Runnable {
                                     } else {
                                         InetSocketAddress gw = gateways.get(gateway);
                                         boolean ack = (mm.type == MACMessage.CONFIRMED_DATA_UP);
-                                        NetworkServerSender sender = new NetworkServerSender(mote, timestamp, ack, channel,gw);
+                                        NetworkServerSender sender = new NetworkServerSender(mote, timestamp, ack, channel, gw);
 
                                         // Execute Sender
                                         senderExecutor.submit(sender);
@@ -196,10 +188,10 @@ public class NetworkServerReceiver implements Runnable {
 
     }
 
-    private String createMessage(String gateway, JSONObject rxpk, MACMessage mm, FrameMessage fm) {
+    private String createMessage(String gateway, JSONObject rxpk, int type, FrameMessage fm) {
         JSONObject message = new JSONObject();
 
-        switch (mm.type) {
+        switch (type) {
             case MACMessage.JOIN_REQUEST:
                 activity.warning("JOIN REQUEST not implemented yet");
                 break;
@@ -216,7 +208,7 @@ public class NetworkServerReceiver implements Runnable {
                 motetx.put("freq",rxpk.getInt("freq"));
                 motetx.put("modu",rxpk.getString("modu"));
                 motetx.put("codr",rxpk.getString("codr"));
-                motetx.put("adr", (fm.control & 0x80) > 0);
+                motetx.put("adr", fm.getAdr());
 
                 userdata.put("motetx",motetx);
 

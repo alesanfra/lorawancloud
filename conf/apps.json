@@ -2,11 +2,13 @@
   "apps":[
     {
       "eui":"1112131415161718",
-      "name":"Experiments"
+      "name":"Experiments",
+      "port":55001
     },
     {
       "eui":"1DEE000012345678",
-      "name":"Logger"
+      "name":"Logger",
+      "port":55002
     }
   ]
 }

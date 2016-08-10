@@ -1,8 +1,6 @@
 package iet.unipi.lorawan.messages;
 
 import iet.unipi.lorawan.Mote;
-import iet.unipi.lorawan.messages.FrameMessage;
-import iet.unipi.lorawan.messages.JoinAccept;
 import org.apache.commons.lang.ArrayUtils;
 import org.bouncycastle.crypto.engines.AESEngine;
 import org.bouncycastle.crypto.macs.CMac;
@@ -16,6 +14,7 @@ import java.nio.ByteOrder;
 import java.security.Key;
 import java.util.Arrays;
 import java.util.Base64;
+import java.util.logging.Logger;
 
 
 /**
@@ -23,6 +22,8 @@ import java.util.Base64;
  */
 
 public class MACMessage {
+    private static final Logger log = Logger.getLogger("MAC Message log");
+
     // LoRaWAN message types
     public static final int JOIN_REQUEST = 0;
     public static final int JOIN_ACCEPT = 1;
@@ -30,6 +31,7 @@ public class MACMessage {
     public static final int UNCONFIRMED_DATA_DOWN = 3;
     public static final int CONFIRMED_DATA_UP = 4;
     public static final int CONFIRMED_DATA_DOWN = 5;
+    public static final int RELAY_UNCONFIRMED_DATA_UP = 6; // LoRaWAN relay mode
 
     // Direction
     private static final byte UPSTREAM = 0;
@@ -40,59 +42,48 @@ public class MACMessage {
 
     // Constants
     public static final int B0_LEN = 16;
-    private static final int MIN_LORAWAN_PAYLOAD = 12;
+    private static final int MIN_LORAWAN_PAYLOAD = 12; // MAC head + addr + Fctrl + Fcnt + MIC
 
     // MAC Messge fields
     public final int type;
-    public final int lorawanVersion;
+    public final int version;
     public final byte[] payload;
-    public final byte[] MIC;
+    public final byte[] mic;
     public final byte dir;
 
 
     /**
      * Parse physical payload
-     * @param physicalPayload
+     * @param physicalPayload Base64 encoded phisical payload
      */
 
     public MACMessage(String physicalPayload) {
         byte[] data = Base64.getDecoder().decode(physicalPayload.getBytes());
 
         if (data.length < MIN_LORAWAN_PAYLOAD) {
-            System.err.println("NOT LoRaWAN message");
+            log.warning("NOT LoRaWAN message");
             this.type = UNCONFIRMED_DATA_UP;
-            this.lorawanVersion = LORAWAN_1;
-            this.payload = new byte[MIN_LORAWAN_PAYLOAD];
-            this.MIC = new byte[4];
+            this.version = LORAWAN_1;
+            this.payload = new byte[0];
+            this.mic = new byte[4];
         } else {
-
             // Parsing Header
             this.type = (data[0] & 0xE0) >> 5;
-            this.lorawanVersion = data[0] & 0x3;
+            this.version = data[0] & 0x3;
 
             // Parsing Payload
             this.payload = Arrays.copyOfRange(data, 1, data.length - 4);
-            //System.out.println("MAC Payload: " + Arrays.toString(this.payload));
-
-
-            this.MIC = Arrays.copyOfRange(data, data.length - 4, data.length);
-
+            this.mic = Arrays.copyOfRange(data, data.length - 4, data.length);
         }
 
-        // Set dir
-        byte direction = -1;
 
-        if (this.type == CONFIRMED_DATA_UP || this.type == UNCONFIRMED_DATA_UP || this.type == JOIN_REQUEST) {
-            direction = UPSTREAM;
+        if (this.type == CONFIRMED_DATA_UP || this.type == UNCONFIRMED_DATA_UP || this.type == JOIN_REQUEST || this.type == RELAY_UNCONFIRMED_DATA_UP) {
+            this.dir = UPSTREAM;
         } else if (this.type == CONFIRMED_DATA_DOWN || this.type == UNCONFIRMED_DATA_DOWN || this.type == JOIN_ACCEPT) {
-            direction = DOWNSTREAM;
-        }
-
-        if (direction == -1) {
-            System.err.println("MAC messsage type not recognized, dir set to 1 (DOWNSTREAM)");
             this.dir = DOWNSTREAM;
         } else {
-            this.dir = direction;
+            log.warning("MAC messsage type not recognized, dir set to 0 (UPSTREAM)");
+            this.dir = UPSTREAM;
         }
     }
 
@@ -106,7 +97,7 @@ public class MACMessage {
 
     public MACMessage(int type, FrameMessage frameMessage, Mote mote) {
         this.type = type & 0x7; // least significant three bits
-        this.lorawanVersion = LORAWAN_1;
+        this.version = LORAWAN_1;
 
         int optLen = (frameMessage.options != null) ? frameMessage.options.length : 0;
         int payloadLen = (frameMessage.payload != null) ? frameMessage.payload.length + 1 : 0;
@@ -150,14 +141,14 @@ public class MACMessage {
         }
 
         // Calculate MIC
-        this.MIC = this.computeMIC(mote);
+        this.mic = this.computeMIC(mote);
     }
 
 
 
     public MACMessage(JoinAccept joinAccept, Mote mote) {
         this.type = JOIN_ACCEPT;
-        this.lorawanVersion = LORAWAN_1;
+        this.version = LORAWAN_1;
         this.dir = DOWNSTREAM;
 
         int channels_len = joinAccept.getChannels().length;
@@ -176,7 +167,7 @@ public class MACMessage {
 
         this.payload = bb.array();
 
-        this.MIC = computeJoinAcceptMIC(mote.appKey);
+        this.mic = this.computeJoinAcceptMIC(mote.appKey);
     }
 
 
@@ -202,7 +193,7 @@ public class MACMessage {
         bb.put((byte) ((this.payload.length + 1) & 0xFF));
 
         // Build MSG and put in byte buffer
-        byte mac_header = (byte) (((this.type << 5) + this.lorawanVersion) & 0xFF);
+        byte mac_header = (byte) (((this.type << 5) + this.version) & 0xFF);
         bb.put(mac_header);
         bb.put(this.payload);
         byte[] stream = bb.array();
@@ -226,7 +217,7 @@ public class MACMessage {
 
     private byte[] computeJoinAcceptMIC(byte[] appKey) {
         ByteBuffer bb = ByteBuffer.allocate(1 + payload.length).order(ByteOrder.LITTLE_ENDIAN);
-        byte mac_header = (byte) (((this.type << 5) + this.lorawanVersion) & 0xFF);
+        byte mac_header = (byte) (((this.type << 5) + this.version) & 0xFF);
         bb.put(mac_header);
         bb.put(this.payload);
         byte[] stream = bb.array();
@@ -250,7 +241,7 @@ public class MACMessage {
      */
 
     public boolean checkIntegrity(Mote mote) {
-        return Arrays.equals(this.MIC, this.computeMIC(mote));
+        return Arrays.equals(this.mic, this.computeMIC(mote));
     }
 
 
@@ -262,10 +253,10 @@ public class MACMessage {
     public byte[] getBytes() {
         ByteBuffer bb = ByteBuffer.allocate(1 + this.payload.length + 4);
         bb.order(ByteOrder.LITTLE_ENDIAN);
-        byte mac_header = (byte) ((this.type << 5) + this.lorawanVersion);
+        byte mac_header = (byte) ((this.type << 5) + this.version);
         bb.put(mac_header);
         bb.put(this.payload);
-        bb.put(this.MIC);
+        bb.put(this.mic);
         byte[] res = bb.array();
         return res;
     }
@@ -278,7 +269,7 @@ public class MACMessage {
      */
 
     public byte[] getEncryptedJoinAccept(byte[] key) {
-        byte[] toEncrypt = ArrayUtils.addAll(this.payload,this.MIC);
+        byte[] toEncrypt = ArrayUtils.addAll(this.payload,this.mic);
         byte[] encrypted = new byte[0];
 
         try {
@@ -293,7 +284,7 @@ public class MACMessage {
             e.printStackTrace();
         }
 
-        byte mac_header = (byte) ((this.type << 5) + this.lorawanVersion);
+        byte mac_header = (byte) ((this.type << 5) + this.version);
         byte[] res = ArrayUtils.add(encrypted,0,mac_header);
         return res;
     }

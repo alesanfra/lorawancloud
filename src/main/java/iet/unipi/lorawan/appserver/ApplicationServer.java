@@ -27,8 +27,6 @@ import java.util.concurrent.Executors;
 
 public class ApplicationServer {
 
-    public static final String APPS_CONF = "conf/apps.json";
-    public static final String MOTES_CONF = "conf/motes.json";
 
     private static final int MAX_THREADS = 50;
 
@@ -37,8 +35,8 @@ public class ApplicationServer {
 
 
     public ApplicationServer() {
-        this.apps = loadAppsFromFile(APPS_CONF);
-        loadMotesFromFile(MOTES_CONF);
+        this.apps = loadAppsFromFile(Constants.APPS_CONF);
+        loadMotesFromFile(Constants.MOTES_CONF);
 
         /**
          * Per ogni applicazione
