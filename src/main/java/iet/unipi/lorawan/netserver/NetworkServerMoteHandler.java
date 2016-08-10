@@ -4,13 +4,18 @@ import iet.unipi.lorawan.*;
 import iet.unipi.lorawan.messages.FrameMessage;
 import iet.unipi.lorawan.messages.GatewayMessage;
 import iet.unipi.lorawan.messages.MACMessage;
+import org.bouncycastle.util.encoders.Hex;
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.*;
 import java.net.DatagramSocket;
 import java.net.InetSocketAddress;
+import java.net.Socket;
 import java.net.SocketException;
+import java.nio.charset.StandardCharsets;
 import java.util.Base64;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.*;
 
@@ -25,13 +30,6 @@ public class NetworkServerMoteHandler implements Runnable {
     // Logger
     private static final Logger activity = Logger.getLogger("Network Server Downstream Forwarder: activity");
     private static final String ACTIVITY_FILE = "data/NS_downstream_forwarder_activity.txt";
-
-    // Data structures
-    private final Mote mote;
-    private final long timestamp;
-    private final boolean ack;
-    private final Channel channel;
-    private final InetSocketAddress gateway;
 
     static {
         rx2Channel = new Channel(869.525,0,27,"LORA","SF12BW125","4/5",true);
@@ -55,21 +53,89 @@ public class NetworkServerMoteHandler implements Runnable {
         }
     }
 
-    public NetworkServerMoteHandler(Mote mote, long timestamp, boolean ack, Channel channel, InetSocketAddress gateway) {
-        this.mote = mote;
-        this.timestamp = timestamp;
-        this.ack = ack;
-        this.channel = channel;
+    private final JSONObject message;
+    private final String gateway;
+    private final InetSocketAddress gatewayAddr;
+    private final MoteCollection motes;
+    private final Map<String, Socket> appServers;
+
+
+
+    /**
+     * Constructor
+     * @param message
+     * @param gatewayAddr
+     * @param motes
+     * @param appServers
+     */
+
+    public NetworkServerMoteHandler(
+            JSONObject message,
+            String gateway,
+            InetSocketAddress gatewayAddr,
+            MoteCollection motes,
+            Map<String,Socket> appServers
+    ) {
+        this.message = message;
         this.gateway = gateway;
+        this.gatewayAddr = gatewayAddr;
+        this.motes = motes;
+        this.appServers = appServers;
     }
 
 
     @Override
     public void run() {
+
+        /*** PARSE MESSAGE ***/
+
+        if (message.getInt("stat") != 1) {
+            activity.warning("CRC not valid, skip packet");
+            return;
+        }
+
+        long timestamp = message.getLong("tmst");
+
+        MACMessage mm = new MACMessage(message.getString("data"));
+        FrameMessage fm = new FrameMessage(mm);
+        Mote mote = motes.get(fm.getDevAddress());
+
+        // Authentication => check mic
+        if (!mm.checkIntegrity(mote)) {
+            activity.warning(fm.getDevAddress() + ": MIC NOT VALID");
+        }
+
+        // Forward message to Application Server
+        Socket toAS = appServers.get(mote.getAppEUI());
+
+        if (toAS == null) {
+            activity.warning("App server NOT found");
+        } else {
+            String appserverMessage = createMessage(gateway,message,mm.type,fm);
+
+            try(OutputStreamWriter out = new OutputStreamWriter(toAS.getOutputStream(), StandardCharsets.US_ASCII)) {
+                out.write(appserverMessage);
+                out.flush();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+        /*** END PARSE MESSAGE ***/
+
+
+        /*** HANDLE MAC COMMANDS ***/
+
+
+
+        /*** END HANDLE MAC COMMANDS ***/
+
+
+
+        /*** SEND DOWNSTREAM MESSAGE ***/
+
         // UDP socket to gateway
         DatagramSocket socket;
-
-        // Init datagram socket TODO: is it efficent?
         try {
             socket = new DatagramSocket();
         } catch (SocketException e) {
@@ -78,21 +144,32 @@ public class NetworkServerMoteHandler implements Runnable {
         }
 
         // Wait message to send
-        String message;
+        String answer;
 
         try {
-            message = mote.messages.poll(TIMEOUT, TimeUnit.MILLISECONDS);
+            answer = mote.messages.poll(TIMEOUT, TimeUnit.MILLISECONDS);
         } catch (InterruptedException e) {
             e.printStackTrace();
             return;
         }
 
-        if (message == null) {
+        if (answer == null) {
             activity.info("Timeout, no message in queue to send to " + mote.getDevAddress());
             return;
         }
 
-        MACMessage macMessage = buildMACMessage(message,ack);
+        MACMessage macMessage = buildMACMessage(answer, mote, (mm.type == MACMessage.CONFIRMED_DATA_UP));
+
+        // Create sender task
+        Channel channel = new Channel(
+                message.getDouble("freq"),
+                0,
+                27,
+                message.getString("modu"),
+                message.getString("datr"),
+                message.getString("codr"),
+                false
+        );
 
 
         // If there there is one message in queue, send it
@@ -125,13 +202,16 @@ public class NetworkServerMoteHandler implements Runnable {
         }
 
         try {
-            socket.send(response.getPacket(gateway));
+            socket.send(response.getPacket(gatewayAddr));
         } catch (IOException e) {
             e.printStackTrace();
         }
+
+
+        /*** END SEND DOWNSTREAM MESSAGE ***/
     }
 
-    private MACMessage buildMACMessage(String line, boolean sendAck) {
+    private MACMessage buildMACMessage(String line, Mote mote, boolean sendAck) {
         // Build frame
         JSONObject msg = new JSONObject(line).getJSONObject("app");
         JSONObject userdata = msg.getJSONObject("userdata");
@@ -156,4 +236,61 @@ public class NetworkServerMoteHandler implements Runnable {
         mote.frameCounterDown++; // TODO: ontrollare che così funzioni
         return macMessage;
     }
+
+
+    private String createMessage(String gateway, JSONObject rxpk, int type, FrameMessage fm) {
+        JSONObject message = new JSONObject();
+
+        switch (type) {
+            case MACMessage.JOIN_REQUEST:
+                activity.warning("JOIN REQUEST not implemented yet");
+                break;
+
+            case MACMessage.CONFIRMED_DATA_UP:
+            case MACMessage.UNCONFIRMED_DATA_UP: {
+                activity.warning("DATA UP not implemented yet");
+                JSONObject userdata = new JSONObject();
+                userdata.put("seqno",fm.counter);
+                userdata.put("port",fm.port);
+                userdata.put("payload",fm.payload);
+
+                JSONObject motetx = new JSONObject();
+                motetx.put("freq",rxpk.getInt("freq"));
+                motetx.put("modu",rxpk.getString("modu"));
+                motetx.put("codr",rxpk.getString("codr"));
+                motetx.put("adr", fm.getAdr());
+
+                userdata.put("motetx",motetx);
+
+                JSONObject gwrx = new JSONObject();
+                gwrx.put("eui",gateway);
+                gwrx.put("time", rxpk.getString("time"));
+                gwrx.put("timefromgateway",true);
+                gwrx.put("chan",rxpk.getInt("chan"));
+                gwrx.put("rfch",rxpk.getInt("rfch"));
+                gwrx.put("rssi",rxpk.getInt("rssi"));
+                gwrx.put("lsnr",rxpk.getInt("lsnr"));
+
+                JSONArray gwrxArray = new JSONArray();
+                gwrxArray.put(gwrx);
+
+                JSONObject app = new JSONObject();
+                app.put("moteeui",motes.get(fm.getDevAddress()).getDevEUI().toLowerCase());
+                app.put("dir","up");
+                app.put("userdata",userdata);
+                app.put("gwrx",gwrxArray);
+
+                message.put("app",app);
+
+                break;
+            }
+            default:
+                activity.warning("Unknown message type");
+        }
+
+        return message.toString();
+    }
 }
+
+
+

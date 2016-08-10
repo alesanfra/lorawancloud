@@ -9,6 +9,7 @@ import org.json.JSONObject;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.net.SocketException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -21,7 +22,6 @@ public class NetworkServer {
 
     // Hashmap
     private final MoteCollection motes;
-    private final Map<String,InetSocketAddress> gateways;
     private final Map<String,Socket> appServers;
 
 
@@ -35,24 +35,27 @@ public class NetworkServer {
 
     public NetworkServer() {
         this.motes = loadMotesFromFile(Constants.MOTES_CONF);
-        this.gateways = new ConcurrentHashMap<>();
         this.appServers = new ConcurrentHashMap<>();
 
-        Thread listener = new Thread(new NetworkServerListener(
-                Constants.NETSERVER_LISTENING_PORT,
-                motes,
-                appServers
-        ));
+        try {
+            Thread listener = new Thread(new NetworkServerListener(
+                    Constants.NETSERVER_LISTENING_PORT,
+                    motes,
+                    appServers
+            ));
 
-        Thread receiver = new Thread(new NetworkServerReceiver(
-                Constants.GATEWAYS_LISTENING_PORT,
-                motes,
-                gateways,
-                appServers
-        ));
+            Thread receiver = new Thread(new NetworkServerReceiver(
+                    Constants.GATEWAYS_LISTENING_PORT,
+                    motes,
+                    appServers
+            ));
 
-        listener.start();
-        receiver.start();
+            listener.start();
+            receiver.start();
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
 

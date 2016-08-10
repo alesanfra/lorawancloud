@@ -10,6 +10,8 @@ public class Constants {
     public static final String MOTES_CONF = "conf/motes.json";
     public static final String APPS_CONF = "conf/apps.json";
 
+    public static final int MAX_HANDLERS = 50;
+
     // Temporization of LoRaWAN downstream messages
     public static final long ONE_SECOND = 1000000; // microsec
     public static final long RECEIVE_DELAY1 = ONE_SECOND;
