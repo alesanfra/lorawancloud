@@ -3,8 +3,8 @@ package iet.unipi.lorawan.netserver;
 import iet.unipi.lorawan.*;
 import iet.unipi.lorawan.messages.FrameMessage;
 import iet.unipi.lorawan.messages.GatewayMessage;
-import iet.unipi.lorawan.messages.MACMessage;
-import org.bouncycastle.util.encoders.Hex;
+import iet.unipi.lorawan.messages.MacCommand;
+import iet.unipi.lorawan.messages.MacMessage;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -28,7 +28,7 @@ public class NetworkServerMoteHandler implements Runnable {
     private static final int TIMEOUT = 2000; // RX_DELAY2
 
     // Logger
-    private static final Logger activity = Logger.getLogger("Network Server Downstream Forwarder: activity");
+    private static final Logger activity = Logger.getLogger("Network Server Mote Handler: activity");
     private static final String ACTIVITY_FILE = "data/NS_downstream_forwarder_activity.txt";
 
     static {
@@ -96,7 +96,7 @@ public class NetworkServerMoteHandler implements Runnable {
 
         long timestamp = message.getLong("tmst");
 
-        MACMessage mm = new MACMessage(message.getString("data"));
+        MacMessage mm = new MacMessage(message.getString("data"));
         FrameMessage fm = new FrameMessage(mm);
         Mote mote = motes.get(fm.getDevAddress());
 
@@ -111,7 +111,7 @@ public class NetworkServerMoteHandler implements Runnable {
         if (toAS == null) {
             activity.warning("App server NOT found");
         } else {
-            String appserverMessage = createMessage(gateway,message,mm.type,fm);
+            String appserverMessage = buildAppserverMessage(gateway,message,mm.type,fm);
 
             try(OutputStreamWriter out = new OutputStreamWriter(toAS.getOutputStream(), StandardCharsets.US_ASCII)) {
                 out.write(appserverMessage);
@@ -125,8 +125,15 @@ public class NetworkServerMoteHandler implements Runnable {
 
 
         /*** HANDLE MAC COMMANDS ***/
-
-
+        if (fm.options.length > 0) {
+            // There is one mac command in clear
+            byte[] ans = handleMacCommand(fm.options);
+            if (ans != null) {
+                mote.commands.add(ans);
+            }
+        } else if (fm.port == 0) {
+            // there is
+        }
 
         /*** END HANDLE MAC COMMANDS ***/
 
@@ -158,7 +165,7 @@ public class NetworkServerMoteHandler implements Runnable {
             return;
         }
 
-        MACMessage macMessage = buildMACMessage(answer, mote, (mm.type == MACMessage.CONFIRMED_DATA_UP));
+        MacMessage macMessage = buildDownstreamMessage(answer, mote, (mm.type == MacMessage.CONFIRMED_DATA_UP));
 
         // Create sender task
         Channel channel = new Channel(
@@ -211,17 +218,23 @@ public class NetworkServerMoteHandler implements Runnable {
         /*** END SEND DOWNSTREAM MESSAGE ***/
     }
 
-    private MACMessage buildMACMessage(String line, Mote mote, boolean sendAck) {
-        // Build frame
+
+    /**
+     * Build the downstream message
+     * @param line
+     * @param mote
+     * @param sendAck
+     * @return
+     */
+
+    private MacMessage buildDownstreamMessage(String line, Mote mote, boolean sendAck) {
         JSONObject msg = new JSONObject(line).getJSONObject("app");
         JSONObject userdata = msg.getJSONObject("userdata");
-        //String devEUI = msg.getString("moteeui");
         byte[] payload = Base64.getDecoder().decode(userdata.getString("payload").getBytes());
-
         byte ack = (sendAck)? FrameMessage.ACK : 0;
 
-        MACMessage macMessage = new MACMessage(
-                MACMessage.UNCONFIRMED_DATA_DOWN, // Non c'è nel protocollo di semtech
+        MacMessage macMessage = new MacMessage(
+                MacMessage.UNCONFIRMED_DATA_DOWN, // Non c'è nel protocollo di semtech
                 new FrameMessage(
                         mote.devAddress,
                         ack,
@@ -233,21 +246,30 @@ public class NetworkServerMoteHandler implements Runnable {
                 ),
                 mote
         );
-        mote.frameCounterDown++; // TODO: ontrollare che così funzioni
+        mote.frameCounterDown++; // TODO: controllare che così funzioni
         return macMessage;
     }
 
 
-    private String createMessage(String gateway, JSONObject rxpk, int type, FrameMessage fm) {
+    /**
+     * Create json message for the app server
+     * @param gateway
+     * @param rxpk
+     * @param type
+     * @param fm
+     * @return
+     */
+
+    private String buildAppserverMessage(String gateway, JSONObject rxpk, int type, FrameMessage fm) {
         JSONObject message = new JSONObject();
 
         switch (type) {
-            case MACMessage.JOIN_REQUEST:
+            case MacMessage.JOIN_REQUEST:
                 activity.warning("JOIN REQUEST not implemented yet");
                 break;
 
-            case MACMessage.CONFIRMED_DATA_UP:
-            case MACMessage.UNCONFIRMED_DATA_UP: {
+            case MacMessage.CONFIRMED_DATA_UP:
+            case MacMessage.UNCONFIRMED_DATA_UP: {
                 activity.warning("DATA UP not implemented yet");
                 JSONObject userdata = new JSONObject();
                 userdata.put("seqno",fm.counter);
@@ -289,6 +311,17 @@ public class NetworkServerMoteHandler implements Runnable {
         }
 
         return message.toString();
+    }
+
+
+    private byte[] handleMacCommand(byte[] command) {
+        switch (command[0] & 0xFF) {
+            case MacCommand.RelaySetupReq:
+                break;
+            default:
+        }
+
+        return null;
     }
 }
 

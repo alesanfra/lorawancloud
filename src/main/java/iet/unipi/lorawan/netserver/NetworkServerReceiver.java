@@ -9,9 +9,7 @@ import org.json.JSONObject;
 import java.io.IOException;
 import java.net.*;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.*;
 import java.util.logging.*;
 
 public class NetworkServerReceiver implements Runnable {
@@ -28,6 +26,10 @@ public class NetworkServerReceiver implements Runnable {
     private final ExecutorService executor = Executors.newFixedThreadPool(Constants.MAX_HANDLERS);
     private final MoteCollection motes;
     private final Map<String, Socket> appServers;
+    private final BlockingQueue<JSONObject> messages;
+    private final Thread analyzer;
+
+
     private byte[] buffer = new byte[BUFFER_LEN];
 
 
@@ -57,6 +59,9 @@ public class NetworkServerReceiver implements Runnable {
         gatewaySocket = new DatagramSocket(port);
         String ip = gatewaySocket.getLocalAddress().getHostAddress();
         activity.info("Listening to: " + ip + " : " + gatewaySocket.getLocalPort());
+        this.messages = new LinkedBlockingQueue<>();
+        this.analyzer = new Thread(new NetworkServerAnalyzer(messages));
+        this.analyzer.start();
     }
 
 

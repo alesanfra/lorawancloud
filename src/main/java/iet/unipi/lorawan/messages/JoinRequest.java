@@ -21,7 +21,7 @@ public class JoinRequest {
     public final byte[] devEUI = new byte[EUI_LENGTH];
     public final byte[] devNonce = new byte[DEV_NONCE_LENGTH];
 
-    public JoinRequest(MACMessage macMessage) {
+    public JoinRequest(MacMessage macMessage) {
         if (macMessage.payload.length >= ((2*EUI_LENGTH) + DEV_NONCE_LENGTH)) {
             ByteBuffer bb = ByteBuffer.wrap(macMessage.payload).order(ByteOrder.LITTLE_ENDIAN);
             bb.get(this.appEUI, 0, EUI_LENGTH);

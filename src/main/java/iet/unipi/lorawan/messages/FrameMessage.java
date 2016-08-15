@@ -94,7 +94,7 @@ public class FrameMessage {
      * @param macMessage Get the frame fields from a received Mac Message
      */
 
-    public FrameMessage(MACMessage macMessage) {
+    public FrameMessage(MacMessage macMessage) {
         this.dir = macMessage.dir;
 
         byte[] data = macMessage.payload;

@@ -1,8 +1,6 @@
 package iet.unipi.lorawan.appserver;
 
 import iet.unipi.lorawan.Mote;
-import iet.unipi.lorawan.appserver.ApplicationServerReceiver;
-import iet.unipi.lorawan.messages.MACMessage;
 import org.bouncycastle.util.encoders.Hex;
 
 import java.net.Socket;

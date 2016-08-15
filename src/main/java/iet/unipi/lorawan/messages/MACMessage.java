@@ -21,7 +21,7 @@ import java.util.logging.Logger;
  * Mac Layer Message
  */
 
-public class MACMessage {
+public class MacMessage {
     private static final Logger log = Logger.getLogger("MAC Message log");
 
     // LoRaWAN message types
@@ -57,7 +57,7 @@ public class MACMessage {
      * @param physicalPayload Base64 encoded phisical payload
      */
 
-    public MACMessage(String physicalPayload) {
+    public MacMessage(String physicalPayload) {
         byte[] data = Base64.getDecoder().decode(physicalPayload.getBytes());
 
         if (data.length < MIN_LORAWAN_PAYLOAD) {
@@ -95,7 +95,7 @@ public class MACMessage {
      * @param mote
      */
 
-    public MACMessage(int type, FrameMessage frameMessage, Mote mote) {
+    public MacMessage(int type, FrameMessage frameMessage, Mote mote) {
         this.type = type & 0x7; // least significant three bits
         this.version = LORAWAN_1;
 
@@ -146,7 +146,7 @@ public class MACMessage {
 
 
 
-    public MACMessage(JoinAccept joinAccept, Mote mote) {
+    public MacMessage(JoinAccept joinAccept, Mote mote) {
         this.type = JOIN_ACCEPT;
         this.version = LORAWAN_1;
         this.dir = DOWNSTREAM;

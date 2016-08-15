@@ -1,6 +1,5 @@
 package iet.unipi.lorawan;
 
-import iet.unipi.lorawan.messages.MACMessage;
 import org.apache.commons.lang.ArrayUtils;
 import org.bouncycastle.util.encoders.Hex;
 
@@ -32,6 +31,7 @@ public class Mote {
 
     // Enqueued messages
     public final BlockingQueue<String> messages = new LinkedBlockingQueue<>();
+    public final BlockingQueue<byte[]> commands = new LinkedBlockingQueue<>();
 
     /**
      * Standard constructor
