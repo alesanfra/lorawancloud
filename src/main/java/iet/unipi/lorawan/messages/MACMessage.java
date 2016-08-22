@@ -178,7 +178,7 @@ public class MacMessage {
      */
 
     private byte[] computeMIC(Mote mote) {
-        int frameCounter = (this.dir == UPSTREAM) ? mote.frameCounterUp : mote.frameCounterDown;
+        int frameCounter = (this.dir == UPSTREAM) ? mote.getFrameCounterUp() : mote.getFrameCounterDown();
         //System.out.println("MIC direction: " + this.dir + " , counter: " + frameCounter);
 
         ByteBuffer bb = ByteBuffer.allocate(B0_LEN + 1 + this.payload.length).order(ByteOrder.LITTLE_ENDIAN);

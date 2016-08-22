@@ -28,7 +28,8 @@ public class DownstreamMessage {
     public DownstreamMessage(Mote mote, int token, int port, String payload) {
         this.mote = mote;
         this.token = token;
-        this.seqno = mote.frameCounterDown++;
+        this.seqno = mote.getFrameCounterDown();
+        mote.incrementFrameCounterDown();
         this.port = port;
         this.payload = payload;
     }

@@ -1,5 +1,6 @@
 package iet.unipi.lorawan;
 
+import iet.unipi.lorawan.netserver.BoundDevice;
 import org.apache.commons.lang.ArrayUtils;
 import org.bouncycastle.util.encoders.Hex;
 
@@ -9,6 +10,7 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.security.Key;
 import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
@@ -25,13 +27,17 @@ public class Mote {
     public final byte[] appKey;
     public byte[] netSessionKey;
     public byte[] appSessionKey;
-    public int frameCounterUp;
-    public int frameCounterDown;
+    private int frameCounterUp;
+    private int frameCounterDown;
+    private long totalFrames = 0;
+    private long receivedFrames = 0;
     public boolean rx1Enabled = true;
 
-    // Enqueued messages
+
     public final BlockingQueue<String> messages = new LinkedBlockingQueue<>();
     public final BlockingQueue<byte[]> commands = new LinkedBlockingQueue<>();
+    public final BlockingQueue<BoundDevice> devices = new LinkedBlockingQueue<>();
+
 
     /**
      * Standard constructor
@@ -185,24 +191,6 @@ public class Mote {
         return new String(Hex.encode(dev_addr));
     }
 
-    /*
-    public String getDevAddress() {
-        byte[] dev_addr = Arrays.copyOf(devAddress,devAddress.length);
-        ArrayUtils.reverse(dev_addr);
-
-        StringBuilder sb = new StringBuilder(11);
-
-        for (int i=0; i<4; i++) {
-            if (sb.length() > 0) {
-                sb.append('.');
-            }
-            sb.append(String.format("%02X",dev_addr[i]));
-        }
-        return sb.toString().toUpperCase();
-    }
-    */
-
-
     @Override
     public boolean equals(Object o) {
         if(!(o instanceof Mote)) {
@@ -217,5 +205,34 @@ public class Mote {
         }
 
         return false;
+    }
+
+
+    public void updateStatistics(int counter) {
+        if (frameCounterUp + 1 == counter) {
+            totalFrames++;
+            receivedFrames++;
+        } else if (frameCounterUp < counter) {
+            totalFrames += counter - frameCounterUp;
+            receivedFrames++;
+        } else if (frameCounterUp > counter) {
+            totalFrames++;
+            receivedFrames++;
+        }
+
+        frameCounterUp = counter;
+    }
+
+
+    public int getFrameCounterUp() {
+        return frameCounterUp;
+    }
+
+    public int getFrameCounterDown() {
+        return frameCounterDown;
+    }
+
+    public void incrementFrameCounterDown() {
+        frameCounterDown++;
     }
 }

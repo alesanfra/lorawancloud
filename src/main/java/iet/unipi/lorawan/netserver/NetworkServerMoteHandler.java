@@ -121,6 +121,7 @@ public class NetworkServerMoteHandler implements Runnable {
             }
         }
 
+        mote.updateStatistics(fm.counter); // Update mote statistics
         /*** END PARSE MESSAGE ***/
 
 
@@ -134,7 +135,6 @@ public class NetworkServerMoteHandler implements Runnable {
         } else if (fm.port == 0) {
             // there is
         }
-
         /*** END HANDLE MAC COMMANDS ***/
 
 
@@ -246,7 +246,7 @@ public class NetworkServerMoteHandler implements Runnable {
                 ),
                 mote
         );
-        mote.frameCounterDown++; // TODO: controllare che così funzioni
+        mote.incrementFrameCounterDown(); // TODO: controllare che così funzioni
         return macMessage;
     }
 
