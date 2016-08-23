@@ -19,19 +19,6 @@ public class ApplicationServerSender implements Runnable {
     private static final Logger activity = Logger.getLogger("Application Server Sender: activity");
     private static final String ACTIVITY_FILE = "data/AS_sender_activity.txt";
 
-    public ApplicationServerSender(Application application) {
-        this.application = application;
-
-        OutputStream outputStream = null;
-        try {
-            outputStream = application.socket.getOutputStream();
-        } catch (IOException e) {
-            e.printStackTrace();
-        } finally {
-            netServer = new PrintWriter(new OutputStreamWriter(outputStream, StandardCharsets.US_ASCII));
-        }
-    }
-
     static {
         // Init logger
         activity.setLevel(Level.INFO);
@@ -51,6 +38,11 @@ public class ApplicationServerSender implements Runnable {
                 handler.setFormatter(new SimpleDateFormatter());
             }
         }
+    }
+
+    public ApplicationServerSender(Application application) throws IOException {
+        this.application = application;
+        this.netServer = new PrintWriter(new OutputStreamWriter(application.socket.getOutputStream(), StandardCharsets.US_ASCII));
     }
 
     @Override

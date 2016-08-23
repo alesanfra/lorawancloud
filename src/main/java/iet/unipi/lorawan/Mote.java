@@ -235,4 +235,9 @@ public class Mote {
     public void incrementFrameCounterDown() {
         frameCounterDown++;
     }
+
+    public String printStatistics() {
+        double percentage = ((double) receivedFrames) / ((double) totalFrames);
+        return String.format("Mote %s: %d correctly received frames over %d (%f)",getDevAddress(),receivedFrames,totalFrames,percentage);
+    }
 }

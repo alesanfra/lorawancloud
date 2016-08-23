@@ -1,18 +1,18 @@
 package iet.unipi.lorawan.messages;
 
+import iet.unipi.lorawan.Mote;
+
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.Arrays;
 
 public class MacCommand {
 
-
     // Relay management mac commands
     public static final int RelaySetupReq = 0x80;
     public static final int RelaySetupAns = 0x81;
     public static final int RelayStatusReq = 0x82;
     public static final int RelayStatusAns = 0x83;
-
 
     public final int type;
     public final byte[] payload;
@@ -37,7 +37,20 @@ public class MacCommand {
         return bb.array();
     }
 
-    public static MacCommand getRelayStatusAns() {
+    public static MacCommand getRelayStatusAns(Mote mote) {
+        int deviceNum = mote.devices.size();
 
+        if (deviceNum > 63) {
+            deviceNum = 63;
+        }
+
+        ByteBuffer bb = ByteBuffer.allocate(255).order(ByteOrder.LITTLE_ENDIAN);
+        bb.put((byte) deviceNum);
+
+        if (deviceNum > 0) {
+            // TODO: implemenetare MAC command
+        }
+
+        return new MacCommand(RelayStatusAns,bb.array(),false);
     }
 }

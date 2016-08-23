@@ -122,6 +122,7 @@ public class NetworkServerMoteHandler implements Runnable {
         }
 
         mote.updateStatistics(fm.counter); // Update mote statistics
+        activity.info(mote.printStatistics());
         /*** END PARSE MESSAGE ***/
 
 

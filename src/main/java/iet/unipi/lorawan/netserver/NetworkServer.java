@@ -20,52 +20,13 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class NetworkServer {
 
-    // Hashmap
-    private final MoteCollection motes;
-    private final Map<String,Socket> appServers;
-
-
-    /**
-     * Default Constructor:
-     *      - allocate all the hasmaps
-     *      - load from file the mote list
-     *      - start receiver
-     *      - start listener
-     */
-
-    public NetworkServer() {
-        this.motes = loadMotesFromFile(Constants.MOTES_CONF);
-        this.appServers = new ConcurrentHashMap<>();
-
-        try {
-            Thread listener = new Thread(new NetworkServerListener(
-                    Constants.NETSERVER_LISTENING_PORT,
-                    motes,
-                    appServers
-            ));
-
-            Thread receiver = new Thread(new NetworkServerReceiver(
-                    Constants.GATEWAYS_LISTENING_PORT,
-                    motes,
-                    appServers
-            ));
-
-            listener.start();
-            receiver.start();
-
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-
     /**
      * Load all mote parameters from a json file
      * @param motesConf Path of the configuration file
      * @return Hashmap with key == deviece addess and value == Mote
      */
 
-    private MoteCollection loadMotesFromFile(String motesConf) {
+    private static MoteCollection loadMotesFromFile(String motesConf) {
         String file = "{}";
         MoteCollection map = new MoteCollection();
 
@@ -121,11 +82,36 @@ public class NetworkServer {
     }
 
     /**
-     * Start method
+     * Start method:
+     *      - allocate all the hasmaps
+     *      - load from file the mote list
+     *      - start receiver
+     *      - start listener
      * @param args
      */
 
     public static void main(String[] args) {
-        NetworkServer networkServer = new NetworkServer();
+        MoteCollection motes = loadMotesFromFile(Constants.MOTES_CONF);
+        Map<String,Socket> appServers = new ConcurrentHashMap<>();
+
+        try {
+            Thread listener = new Thread(new NetworkServerListener(
+                    Constants.NETSERVER_LISTENING_PORT,
+                    motes,
+                    appServers
+            ));
+
+            Thread receiver = new Thread(new NetworkServerReceiver(
+                    Constants.GATEWAYS_LISTENING_PORT,
+                    motes,
+                    appServers
+            ));
+
+            listener.start();
+            receiver.start();
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 }

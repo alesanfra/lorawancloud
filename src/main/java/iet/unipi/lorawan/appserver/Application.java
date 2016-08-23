@@ -15,7 +15,7 @@ public class Application {
     public final String name;
     public final BlockingQueue<DownstreamMessage> messages = new LinkedBlockingQueue<>();
     public Socket socket;
-    public final Map<String,Mote> motes;
+    public final Map<String,Mote> motes; // key is eui
     public ApplicationServerSender sender;
     public ApplicationServerReceiver receiver;
 
