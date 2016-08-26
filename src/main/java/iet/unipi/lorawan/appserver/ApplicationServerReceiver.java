@@ -9,8 +9,8 @@ import javax.crypto.Cipher;
 import javax.crypto.spec.SecretKeySpec;
 import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.net.SocketException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
@@ -20,28 +20,17 @@ import java.util.logging.*;
 
 
 public class ApplicationServerReceiver implements Runnable {
-
-    private final BufferedReader netServer;
-    private final Application application;
-    private final byte UPSTREAM_DIRECTION = 0;
+    private static final byte UPSTREAM_DIRECTION = 0;
+    private static final String FILE_HEADER = "data/AS_";
 
     // Logger
-    private static final Logger activity = Logger.getLogger("Application Server Receiver: activity");
-    private static final String ACTIVITY_FILE = "data/AS_receiver_activity.txt";
+    private final Logger activity;
+
+    // Variables
+    private final BufferedReader socket;
+    private final Application application;
 
     static {
-        // Init logger
-        activity.setLevel(Level.INFO);
-        FileHandler activityFile = null;
-        try {
-            activityFile = new FileHandler(ACTIVITY_FILE, true);
-        } catch (IOException e) {
-            e.printStackTrace();
-        } finally {
-            activityFile.setFormatter(new SimpleDateFormatter());
-            activity.addHandler(activityFile);
-        }
-
         // Change ConsoleHandler behavior
         for (Handler handler: Logger.getLogger("").getHandlers()) {
             if (handler instanceof ConsoleHandler) {
@@ -53,15 +42,30 @@ public class ApplicationServerReceiver implements Runnable {
 
     public ApplicationServerReceiver(Application application) throws IOException {
         this.application = application;
-        this.netServer = new BufferedReader(new InputStreamReader(application.socket.getInputStream(), StandardCharsets.US_ASCII));
+        this.socket = new BufferedReader(new InputStreamReader(application.socket.getInputStream(), StandardCharsets.US_ASCII));
+        String appEui = new String(Hex.encode(application.eui));
+
+        // Init logger
+        this.activity = Logger.getLogger("Application Server: " + appEui);
+        activity.setLevel(Level.INFO);
+
+        try {
+            FileHandler activityFile = new FileHandler(FILE_HEADER + appEui + ".txt", true);
+            activityFile.setFormatter(new SimpleDateFormatter());
+            activity.addHandler(activityFile);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
 
     @Override
     public void run() {
+        activity.info("Start AppServer Receiver: " + application.name + ", eui: " + new String(Hex.encode(application.eui)));
+
         while (true) {
             try {
-                String message = netServer.readLine();
+                String message = socket.readLine();
                 //activity.info(message);
 
                 JSONObject appJson = new JSONObject(message).getJSONObject("app");
@@ -81,12 +85,26 @@ public class ApplicationServerReceiver implements Runnable {
                 byte[] payload = decryptPayload(data.getString("payload"), mote, seqno);
                 activity.info(String.format("Payload (%d bytes): %s", payload.length, new String(Hex.encode(payload))));
 
+            } catch (SocketException e) {
+                if (e.getMessage().equals("Connection reset")){
+                    e.printStackTrace();
+                    return;
+                }
+
             } catch (IOException e) {
                 e.printStackTrace();
             }
         }
     }
 
+
+    /**
+     *
+     * @param payload
+     * @param mote
+     * @param counter
+     * @return
+     */
 
     private byte[] decryptPayload(String payload, Mote mote, int counter) {
 
@@ -134,8 +152,4 @@ public class ApplicationServerReceiver implements Runnable {
 
         return decrypted;
     }
-
-
-
-
 }

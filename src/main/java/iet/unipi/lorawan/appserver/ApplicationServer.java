@@ -2,16 +2,11 @@ package iet.unipi.lorawan.appserver;
 
 import iet.unipi.lorawan.Constants;
 import iet.unipi.lorawan.Mote;
-import iet.unipi.lorawan.Util;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.net.ServerSocket;
 import java.net.Socket;
-import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -21,52 +16,45 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-/**
- * Created by alessio on 12/05/16.
- */
-
 public class ApplicationServer {
-
 
     private static final int MAX_THREADS = 50;
 
-    private final Map<String, Application> apps;
-    private final ExecutorService executor = Executors.newFixedThreadPool(MAX_THREADS);
 
+    /**
+     * Load application and mote configurations from a json file
+     * @param appConf path of the applications conf file
+     * @param motesConf path of the motes conf file
+     * @return HashMap containg the applications (appEui is the key)
+     */
 
-    public ApplicationServer() {
-        this.apps = loadAppsFromFile(Constants.APPS_CONF);
-        loadMotesFromFile(Constants.MOTES_CONF);
+    private static Map<String, Application> loadAppsAndMotes(String appConf, String motesConf) {
+        String file = "{}";
 
-        /**
-         * Per ogni applicazione
-         * a. creare un socket TCP verso il NS
-         * b. creare un server socket per accettare eventuali CS
-         * c.
-         */
-
-        for (Application app: apps.values()) {
-            try {
-                Socket socket = new Socket(Constants.NETSERVER_ADDRESS, Constants.NETSERVER_LISTENING_PORT);
-                app.socket = socket;
-
-                app.sender = new ApplicationServerSender(app);
-                app.receiver = new ApplicationServerReceiver(app);
-
-                executor.execute(app.sender);
-                executor.execute(app.receiver);
-
-            } catch (UnknownHostException e) {
-                e.printStackTrace();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+        // Read json from file
+        try {
+            Path path = Paths.get(appConf);
+            file = new String(Files.readAllBytes(path), StandardCharsets.US_ASCII);
+        } catch (IOException e) {
+            e.printStackTrace();
         }
 
-    }
+        JSONArray appsJSON = new JSONObject(file).getJSONArray("apps");
 
-    private void loadMotesFromFile(String motesConf) {
-        String file = "{}";
+        Map<String,Application> applications = new ConcurrentHashMap<>();
+
+        // Scorro gli oggetti json e creo le applicazioni
+        for (int i=0; i<appsJSON.length(); i++) {
+            JSONObject app = appsJSON.getJSONObject(i);
+            String appEUI = app.getString("eui");
+            String appName = app.getString("name");
+            applications.put(appEUI, new Application(appEUI,appName));
+        }
+
+
+        // LOAD MOTES
+
+        file = "{}";
 
         // Read json from file
         try {
@@ -113,40 +101,18 @@ public class ApplicationServer {
             }
 
             // Per ogni motes prendo l'app corrsipondente
-            Application app = apps.get(appEUI);
+            Application app = applications.get(appEUI);
 
             // Aggiungo il nuovo mote alla lista dell'app corrispondente
             app.motes.put(devAddr,newMote);
         }
+
+        return applications;
     }
 
-    private Map<String, Application> loadAppsFromFile(String appConf) {
-        String file = "{}";
 
-        // Read json from file
-        try {
-            Path path = Paths.get(appConf);
-            file = new String(Files.readAllBytes(path), StandardCharsets.US_ASCII);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-        JSONArray apps = new JSONObject(file).getJSONArray("apps");
-
-        Map<String,Application> map = new ConcurrentHashMap<>();
-
-        // Scorro gli oggetti json e creo le applicazioni
-        for (int i=0; i<apps.length(); i++) {
-            JSONObject app = apps.getJSONObject(i);
-            String appEUI = app.getString("eui");
-            String appName = app.getString("name");
-            map.put(appEUI, new Application(appEUI,appName));
-        }
-
-        return map;
-    }
-
-    private void testAS() {
+    /*
+    private static void testAS(Map<String, Application> apps) {
         for (Map.Entry<String, Application> entry: apps.entrySet()) {
             Application app = entry.getValue();
 
@@ -158,9 +124,31 @@ public class ApplicationServer {
             }
         }
     }
+    */
+
 
 
     public static void main(String[] args) {
-        ApplicationServer applicationServer = new ApplicationServer();
+        ExecutorService executor = Executors.newFixedThreadPool(MAX_THREADS);
+        Map<String, Application> apps = loadAppsAndMotes(Constants.APPS_CONF,Constants.MOTES_CONF);
+
+        /**
+         * Per ogni applicazione
+         * a. creare un socket TCP verso il NS
+         * b. I threads sender e receiver
+         */
+
+        for (Application app: apps.values()) {
+            try {
+                Socket socket = new Socket(Constants.NETSERVER_ADDRESS, Constants.NETSERVER_LISTENING_PORT);
+                app.socket = socket;
+                app.sender = new ApplicationServerSender(app);
+                app.receiver = new ApplicationServerReceiver(app);
+                executor.execute(app.sender);
+                executor.execute(app.receiver);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
     }
 }
