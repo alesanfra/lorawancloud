@@ -21,7 +21,7 @@ import java.util.logging.Logger;
  * Mac Layer Message
  */
 
-public class MacMessage {
+public class Packet {
     private static final Logger log = Logger.getLogger("MAC Message log");
 
     // LoRaWAN message types
@@ -57,7 +57,7 @@ public class MacMessage {
      * @param physicalPayload Base64 encoded phisical payload
      */
 
-    public MacMessage(String physicalPayload) {
+    public Packet(String physicalPayload) {
         byte[] data = Base64.getDecoder().decode(physicalPayload.getBytes());
 
         if (data.length < MIN_LORAWAN_PAYLOAD) {
@@ -91,34 +91,34 @@ public class MacMessage {
     /**
      * Build a MAC message from scratch
      * @param type
-     * @param frameMessage
+     * @param frame
      * @param mote
      */
 
-    public MacMessage(int type, FrameMessage frameMessage, Mote mote) {
+    public Packet(int type, Frame frame, Mote mote) {
         this.type = type & 0x7; // least significant three bits
         this.version = LORAWAN_1;
 
-        int optLen = (frameMessage.options != null) ? frameMessage.options.length : 0;
-        int payloadLen = (frameMessage.payload != null) ? frameMessage.payload.length + 1 : 0;
+        int optLen = (frame.options != null) ? frame.options.length : 0;
+        int payloadLen = (frame.payload != null) ? frame.payload.length + 1 : 0;
 
         // Build Encrypted payload from FrameMessage Message
-        ByteBuffer bb = ByteBuffer.allocate(FrameMessage.HEADER_LEN + optLen + payloadLen).order(ByteOrder.LITTLE_ENDIAN);
+        ByteBuffer bb = ByteBuffer.allocate(Frame.HEADER_LEN + optLen + payloadLen).order(ByteOrder.LITTLE_ENDIAN);
 
         // Put frameMessage header == 7 bytes
-        bb.put(frameMessage.devAddress);
-        bb.put(frameMessage.control);
-        bb.putShort(frameMessage.counter);
+        bb.put(frame.devAddress);
+        bb.put(frame.control);
+        bb.putShort(frame.counter);
 
         // Put frameMessage options
         if (optLen > 0) {
-            bb.put(frameMessage.options);
+            bb.put(frame.options);
         }
 
         // Put frameMessage port and encrypted frameMessage payload
         if (payloadLen > 0) {
-            bb.put(frameMessage.port);
-            bb.put(frameMessage.getEncryptedPayload(mote.appSessionKey));
+            bb.put(frame.port);
+            bb.put(frame.getEncryptedPayload(mote.appSessionKey));
         }
 
         // Get MAC payload
@@ -146,7 +146,7 @@ public class MacMessage {
 
 
 
-    public MacMessage(JoinAccept joinAccept, Mote mote) {
+    public Packet(JoinAccept joinAccept, Mote mote) {
         this.type = JOIN_ACCEPT;
         this.version = LORAWAN_1;
         this.dir = DOWNSTREAM;

@@ -1,10 +1,10 @@
 package iet.unipi.lorawan.netserver;
 
 import iet.unipi.lorawan.*;
-import iet.unipi.lorawan.messages.FrameMessage;
+import iet.unipi.lorawan.messages.Frame;
 import iet.unipi.lorawan.messages.GatewayMessage;
 import iet.unipi.lorawan.messages.MacCommand;
-import iet.unipi.lorawan.messages.MacMessage;
+import iet.unipi.lorawan.messages.Packet;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -96,8 +96,8 @@ public class NetworkServerMoteHandler implements Runnable {
 
         long timestamp = message.getLong("tmst");
 
-        MacMessage mm = new MacMessage(message.getString("data"));
-        FrameMessage fm = new FrameMessage(mm);
+        Packet mm = new Packet(message.getString("data"));
+        Frame fm = new Frame(mm);
         Mote mote = motes.get(fm.getDevAddress());
 
         // Authentication => check mic
@@ -166,7 +166,7 @@ public class NetworkServerMoteHandler implements Runnable {
             return;
         }
 
-        MacMessage macMessage = buildDownstreamMessage(answer, mote, (mm.type == MacMessage.CONFIRMED_DATA_UP));
+        Packet packet = buildDownstreamMessage(answer, mote, (mm.type == Packet.CONFIRMED_DATA_UP));
 
         // Create sender task
         Channel channel = new Channel(
@@ -193,7 +193,7 @@ public class NetworkServerMoteHandler implements Runnable {
                     timestamp + Constants.RECEIVE_DELAY1,
                     channel,
                     IPOL,
-                    macMessage.getBytes()
+                    packet.getBytes()
             );
         } else {
             response = new GatewayMessage(
@@ -205,7 +205,7 @@ public class NetworkServerMoteHandler implements Runnable {
                     timestamp + Constants.RECEIVE_DELAY2,
                     rx2Channel,
                     IPOL,
-                    macMessage.getBytes()
+                    packet.getBytes()
             );
         }
 
@@ -228,27 +228,27 @@ public class NetworkServerMoteHandler implements Runnable {
      * @return
      */
 
-    private MacMessage buildDownstreamMessage(String line, Mote mote, boolean sendAck) {
+    private Packet buildDownstreamMessage(String line, Mote mote, boolean sendAck) {
         JSONObject msg = new JSONObject(line).getJSONObject("app");
         JSONObject userdata = msg.getJSONObject("userdata");
         byte[] payload = Base64.getDecoder().decode(userdata.getString("payload").getBytes());
-        byte ack = (sendAck)? FrameMessage.ACK : 0;
+        byte ack = (sendAck)? Frame.ACK : 0;
 
-        MacMessage macMessage = new MacMessage(
-                MacMessage.UNCONFIRMED_DATA_DOWN, // Non c'è nel protocollo di semtech
-                new FrameMessage(
+        Packet packet = new Packet(
+                Packet.UNCONFIRMED_DATA_DOWN, // Non c'è nel protocollo di semtech
+                new Frame(
                         mote.devAddress,
                         ack,
                         (short) msg.get("seqno"),
                         null,
                         userdata.getInt("port"),
                         payload,
-                        FrameMessage.DOWNSTREAM
+                        Frame.DOWNSTREAM
                 ),
                 mote
         );
         mote.incrementFrameCounterDown(); // TODO: controllare che così funzioni
-        return macMessage;
+        return packet;
     }
 
 
@@ -261,16 +261,16 @@ public class NetworkServerMoteHandler implements Runnable {
      * @return
      */
 
-    private String buildAppserverMessage(String gateway, JSONObject rxpk, int type, FrameMessage fm) {
+    private String buildAppserverMessage(String gateway, JSONObject rxpk, int type, Frame fm) {
         JSONObject message = new JSONObject();
 
         switch (type) {
-            case MacMessage.JOIN_REQUEST:
+            case Packet.JOIN_REQUEST:
                 activity.warning("JOIN REQUEST not implemented yet");
                 break;
 
-            case MacMessage.CONFIRMED_DATA_UP:
-            case MacMessage.UNCONFIRMED_DATA_UP: {
+            case Packet.CONFIRMED_DATA_UP:
+            case Packet.UNCONFIRMED_DATA_UP: {
                 activity.warning("DATA UP not implemented yet");
                 JSONObject userdata = new JSONObject();
                 userdata.put("seqno",fm.counter);

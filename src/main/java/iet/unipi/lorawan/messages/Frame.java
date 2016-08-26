@@ -15,7 +15,7 @@ import java.util.logging.Logger;
  * Frame Layer Message
  */
 
-public class FrameMessage {
+public class Frame {
 
     private static final Logger log = Logger.getLogger("Frame Message log");
 
@@ -52,7 +52,7 @@ public class FrameMessage {
      * @param dir
      */
 
-    public FrameMessage(byte[] devAddress, byte control, short counter, byte[] options, int port, byte[] payload, int dir) {
+    public Frame(byte[] devAddress, byte control, short counter, byte[] options, int port, byte[] payload, int dir) {
 
         // Check options
         if (options == null) {
@@ -91,13 +91,13 @@ public class FrameMessage {
 
     /**
      * Parse raw data
-     * @param macMessage Get the frame fields from a received Mac Message
+     * @param packet Get the frame fields from a received Mac Message
      */
 
-    public FrameMessage(MacMessage macMessage) {
-        this.dir = macMessage.dir;
+    public Frame(Packet packet) {
+        this.dir = packet.dir;
 
-        byte[] data = macMessage.payload;
+        byte[] data = packet.payload;
         ByteBuffer bb = ByteBuffer.wrap(data).order(ByteOrder.LITTLE_ENDIAN);
         this.devAddress = Arrays.copyOfRange(data, 0, 4);
         this.control = bb.get(4);
