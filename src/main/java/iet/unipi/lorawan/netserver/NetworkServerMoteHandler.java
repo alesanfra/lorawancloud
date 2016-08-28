@@ -57,7 +57,7 @@ public class NetworkServerMoteHandler implements Runnable {
     private final String gateway;
     private final InetSocketAddress gatewayAddr;
     private final MoteCollection motes;
-    private final Map<String, Socket> appServers;
+    private final Map<String, AppServer> appServers;
 
 
 
@@ -74,7 +74,7 @@ public class NetworkServerMoteHandler implements Runnable {
             String gateway,
             InetSocketAddress gatewayAddr,
             MoteCollection motes,
-            Map<String,Socket> appServers
+            Map<String,AppServer> appServers
     ) {
         this.message = message;
         this.gateway = gateway;
@@ -116,17 +116,14 @@ public class NetworkServerMoteHandler implements Runnable {
         mote.updateStatistics(fm.counter); // Update mote statistics
 
         // Forward message to Application Server
-        Socket toAS = appServers.get(mote.getAppEUI());
+        AppServer appServer = appServers.get(mote.getAppEUI());
 
-        if (toAS == null) {
+        if (appServer == null) {
             activity.warning("App server NOT found");
-        } else if (toAS.isClosed()) {
-            activity.warning("Socket closed");
-            appServers.remove(mote.getAppEUI());
         } else {
             String appserverMessage = buildAppserverMessage(gateway,message,mm.type,fm);
-
-            try(PrintWriter out = new PrintWriter(new OutputStreamWriter(toAS.getOutputStream(), StandardCharsets.US_ASCII))) {
+            try(Socket toAS = new Socket(appServer.address, appServer.port)) {
+                PrintWriter out = new PrintWriter(new OutputStreamWriter(toAS.getOutputStream(), StandardCharsets.US_ASCII));
                 out.println(appserverMessage);
                 out.flush();
             } catch (IOException e) {
@@ -287,7 +284,7 @@ public class NetworkServerMoteHandler implements Runnable {
                 JSONObject userdata = new JSONObject();
                 userdata.put("seqno",fm.counter);
                 userdata.put("port",fm.port);
-                userdata.put("payload",fm.payload);
+                userdata.put("payload", Base64.getEncoder().encodeToString(fm.payload));
 
                 JSONObject motetx = new JSONObject();
                 motetx.put("freq",rxpk.getInt("freq"));

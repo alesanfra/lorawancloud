@@ -6,7 +6,6 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.IOException;
-import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -48,7 +47,9 @@ public class ApplicationServer {
             JSONObject app = appsJSON.getJSONObject(i);
             String appEUI = app.getString("eui");
             String appName = app.getString("name");
-            applications.put(appEUI, new Application(appEUI,appName));
+            String address = app.getString("addr");
+            int port = app.getInt("port");
+            applications.put(appEUI, new Application(appEUI,appName, address, port));
         }
 
 
@@ -70,9 +71,9 @@ public class ApplicationServer {
         for (int i=0; i<motes.length(); i++) {
             JSONObject mote = motes.getJSONObject(i);
 
-            String appEUI = mote.getString("appeui");
-            String devEUI = mote.getString("deveui");
-            String devAddr = mote.getString("devaddr");
+            String appEUI = mote.getString("appeui").toLowerCase();
+            String devEUI = mote.getString("deveui").toLowerCase();
+            String devAddr = mote.getString("devaddr").toLowerCase();
 
             // Creo un istanza di Mote e la aggiungo alla lista di motes
             Mote newMote;
@@ -104,7 +105,7 @@ public class ApplicationServer {
             Application app = applications.get(appEUI);
 
             // Aggiungo il nuovo mote alla lista dell'app corrispondente
-            app.motes.put(devAddr,newMote);
+            app.motes.put(devEUI,newMote);
         }
 
         return applications;
@@ -140,12 +141,12 @@ public class ApplicationServer {
 
         for (Application app: apps.values()) {
             try {
-                Socket socket = new Socket(Constants.NETSERVER_ADDRESS, Constants.NETSERVER_LISTENING_PORT);
-                app.socket = socket;
-                app.sender = new ApplicationServerSender(app);
-                app.receiver = new ApplicationServerReceiver(app);
-                executor.execute(app.sender);
-                executor.execute(app.receiver);
+                //Socket socket = new Socket(Constants.NETSERVER_ADDRESS, Constants.NETSERVER_LISTENING_PORT);
+                //app.socket = socket;
+                //app.sender = new ApplicationServerSender(app);
+                //app.receiver = new ApplicationServerHandler(app);
+                executor.execute(new ApplicationServerSender(app));
+                executor.execute(new ApplicationServerListener(app));
             } catch (IOException e) {
                 e.printStackTrace();
             }

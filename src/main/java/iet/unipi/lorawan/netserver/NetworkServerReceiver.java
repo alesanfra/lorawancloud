@@ -25,7 +25,7 @@ public class NetworkServerReceiver implements Runnable {
     private final DatagramSocket gatewaySocket;
     private final ExecutorService executor = Executors.newFixedThreadPool(Constants.MAX_HANDLERS);
     private final MoteCollection motes;
-    private final Map<String, Socket> appServers;
+    private final Map<String, AppServer> appServers;
 
 
     private byte[] buffer = new byte[BUFFER_LEN];
@@ -50,7 +50,7 @@ public class NetworkServerReceiver implements Runnable {
         }
     }
 
-    public NetworkServerReceiver(int port, MoteCollection motes, Map<String,Socket> appServers) throws SocketException {
+    public NetworkServerReceiver(int port, MoteCollection motes, Map<String,AppServer> appServers) throws SocketException {
         this.motes = motes;
         this.appServers = appServers;
         this.gateways = new ConcurrentHashMap<>();

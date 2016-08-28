@@ -10,6 +10,7 @@ import javax.crypto.spec.SecretKeySpec;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.net.Socket;
 import java.net.SocketException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -19,7 +20,7 @@ import java.util.Base64;
 import java.util.logging.*;
 
 
-public class ApplicationServerReceiver implements Runnable {
+public class ApplicationServerHandler implements Runnable {
     private static final byte UPSTREAM_DIRECTION = 0;
     private static final String FILE_HEADER = "data/AS_";
 
@@ -40,9 +41,9 @@ public class ApplicationServerReceiver implements Runnable {
     }
 
 
-    public ApplicationServerReceiver(Application application) throws IOException {
+    public ApplicationServerHandler(Application application, Socket socket) throws IOException {
         this.application = application;
-        this.socket = new BufferedReader(new InputStreamReader(application.socket.getInputStream(), StandardCharsets.US_ASCII));
+        this.socket = new BufferedReader(new InputStreamReader(socket.getInputStream(), StandardCharsets.US_ASCII));
         String appEui = new String(Hex.encode(application.eui));
 
         // Init logger
@@ -66,14 +67,21 @@ public class ApplicationServerReceiver implements Runnable {
         while (true) {
             try {
                 String message = socket.readLine();
-                //activity.info(message);
+                activity.info("Messaggio: " + message);
 
-                JSONObject appJson = new JSONObject(message).getJSONObject("app");
+                if(message == null) {
+                    return;
+                }
+
+                JSONObject m = new JSONObject(message);
+                JSONObject appJson = m.getJSONObject("app");
+
 
                 String moteEui = appJson.getString("moteeui");
                 Mote mote = application.motes.get(moteEui);
 
                 if (mote == null) {
+                    activity.warning("Mote not found");
                     continue;
                 }
 

@@ -90,7 +90,7 @@ public class NetworkServer {
 
     public static void main(String[] args) {
         MoteCollection motes = loadMotesFromFile(Constants.MOTES_CONF);
-        Map<String,Socket> appServers = new ConcurrentHashMap<>();
+        Map<String,AppServer> appServers = new ConcurrentHashMap<>();
 
         try {
             Thread listener = new Thread(new NetworkServerListener(

@@ -1,6 +1,7 @@
 package iet.unipi.lorawan.appserver;
 
 
+import iet.unipi.lorawan.Constants;
 import iet.unipi.lorawan.SimpleDateFormatter;
 import org.bouncycastle.util.encoders.Hex;
 import org.json.JSONObject;
@@ -8,6 +9,7 @@ import org.json.JSONObject;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
+import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.util.logging.*;
 
@@ -29,7 +31,8 @@ public class ApplicationServerSender implements Runnable {
 
     public ApplicationServerSender(Application application) throws IOException {
         this.application = application;
-        this.socket = new PrintWriter(new OutputStreamWriter(application.socket.getOutputStream(), StandardCharsets.US_ASCII));
+        Socket socket = new Socket(Constants.NETSERVER_ADDRESS, Constants.NETSERVER_LISTENING_PORT);
+        this.socket = new PrintWriter(new OutputStreamWriter(socket.getOutputStream(), StandardCharsets.US_ASCII));
 
         String appEui = new String(Hex.encode(application.eui));
 
@@ -51,8 +54,13 @@ public class ApplicationServerSender implements Runnable {
         // Send app eui to netserver
         String appeui = new String(Hex.encode(application.eui));
         activity.info("Start AppServer Sender: " + application.name + ", eui: " + appeui);
+        JSONObject appServer = new JSONObject();
+        appServer.put("appeui",appeui);
+        appServer.put("addr",application.address);
+        appServer.put("port",application.port);
         JSONObject hello = new JSONObject();
-        hello.put("appeui",appeui);
+        hello.put("appserver",appServer);
+
         socket.println(hello.toString());
         socket.flush();
 

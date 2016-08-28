@@ -24,7 +24,7 @@ public class NetworkServerListener implements Runnable {
 
     // Hashmap
     private final MoteCollection motes;
-    private final Map<String,Socket> appServers;
+    private final Map<String,AppServer> appServers;
 
     // Executors
     private ExecutorService executor = Executors.newCachedThreadPool();
@@ -42,7 +42,7 @@ public class NetworkServerListener implements Runnable {
         }
     }
 
-    public NetworkServerListener(int port, MoteCollection motes, Map<String, Socket> appServers) throws IOException {
+    public NetworkServerListener(int port, MoteCollection motes, Map<String, AppServer> appServers) throws IOException {
         this.motes = motes;
         this.appServers = appServers;
         this.listener = new ServerSocket(port);
@@ -66,8 +66,8 @@ public class NetworkServerListener implements Runnable {
         while (true) {
             try {
                 // Accept new Application Server
-                Socket appSocket = listener.accept();
-                BufferedReader in = new BufferedReader(new InputStreamReader(appSocket.getInputStream(), StandardCharsets.US_ASCII));
+                Socket socket = listener.accept();
+                BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream(), StandardCharsets.US_ASCII));
                 String line = in.readLine();
                 activity.info("New application: " + line);
 
@@ -77,33 +77,26 @@ public class NetworkServerListener implements Runnable {
 
                 // Read Application EUI
                 JSONObject message = new JSONObject(line);
-                String appEUI = message.getString("appeui");
+                AppServer appServer = new AppServer(message.getJSONObject("appserver"));
 
-                if (appEUI.length() != Constants.EUI_LENGTH) {
+
+                if (appServer.eui.length() != Constants.EUI_LENGTH) {
                     // AppEUI not valid
-                    activity.info("Invalid App EUI: " + appEUI);
-                    appSocket.close();
+                    activity.info("Invalid App EUI: " + appServer.eui);
+                    socket.close();
                     continue;
                 }
 
-                Socket socket = appServers.get(appEUI);
 
-                if (socket != null && !socket.isClosed()) {
-                    // Application was already registered, reject connection
-                    activity.info("Already registered app server: " + appEUI);
-                    appSocket.close();
-                    continue;
-                }
-
-                appServers.put(appEUI,appSocket);
+                appServers.put(appServer.eui,appServer);
 
                 // Start Enqueuer
                 try {
-                    executor.execute(new NetworkServerEnqueuer(appEUI, appSocket, motes));
+                    executor.execute(new NetworkServerEnqueuer(appServer.eui, socket, motes));
                 } catch (IOException e) {
                     e.printStackTrace();
-                    appServers.remove(appEUI);
-                    appSocket.close();
+                    appServers.remove(appServer.eui);
+                    socket.close();
                 }
 
             } catch (IOException e) {
