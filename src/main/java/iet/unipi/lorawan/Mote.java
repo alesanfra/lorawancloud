@@ -32,6 +32,7 @@ public class Mote {
     private long totalFrames = 0;
     private long receivedFrames = 0;
     public boolean rx1Enabled = true;
+    private boolean firstFrame = true;
 
 
     public final BlockingQueue<String> messages = new LinkedBlockingQueue<>();
@@ -56,7 +57,7 @@ public class Mote {
         this.appKey = appKey;
         this.netSessionKey = netSessionKey;
         this.appSessionKey = appSessionKey;
-        this.frameCounterUp = 0;
+        this.frameCounterUp = -1;
         this.frameCounterDown = 0;
     }
 
@@ -209,7 +210,11 @@ public class Mote {
 
 
     public void updateStatistics(int counter) {
-        if (frameCounterUp + 1 == counter) {
+        if (firstFrame) {
+            firstFrame = false;
+            totalFrames++;
+            receivedFrames++;
+        } else if (frameCounterUp + 1 == counter) {
             totalFrames++;
             receivedFrames++;
         } else if (frameCounterUp < counter) {
@@ -237,7 +242,7 @@ public class Mote {
     }
 
     public String printStatistics() {
-        double percentage = ((double) receivedFrames) / ((double) totalFrames);
-        return String.format("Mote %s: %d correctly received frames over %d (%f)",getDevAddress(),receivedFrames,totalFrames,percentage);
+        double percentage = (((double) receivedFrames) / ((double) totalFrames))*100;
+        return String.format("Mote %s: %d correctly received frames over %d (%.2f%%)",getDevAddress(),receivedFrames,totalFrames,percentage);
     }
 }

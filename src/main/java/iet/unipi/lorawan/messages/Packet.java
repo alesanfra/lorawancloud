@@ -5,6 +5,7 @@ import org.apache.commons.lang.ArrayUtils;
 import org.bouncycastle.crypto.engines.AESEngine;
 import org.bouncycastle.crypto.macs.CMac;
 import org.bouncycastle.crypto.params.KeyParameter;
+import org.bouncycastle.util.encoders.Hex;
 
 
 import javax.crypto.Cipher;
@@ -141,7 +142,7 @@ public class Packet {
         }
 
         // Calculate MIC
-        this.mic = this.computeMIC(mote);
+        this.mic = this.computeMIC(mote,frame.counter);
     }
 
 
@@ -177,8 +178,8 @@ public class Packet {
      * @return
      */
 
-    private byte[] computeMIC(Mote mote) {
-        int frameCounter = (this.dir == UPSTREAM) ? mote.getFrameCounterUp() : mote.getFrameCounterDown();
+    private byte[] computeMIC(Mote mote, int frameCounter) {
+        //int frameCounter = (this.dir == UPSTREAM) ? mote.getFrameCounterUp() : mote.getFrameCounterDown();
         //System.out.println("MIC direction: " + this.dir + " , counter: " + frameCounter);
 
         ByteBuffer bb = ByteBuffer.allocate(B0_LEN + 1 + this.payload.length).order(ByteOrder.LITTLE_ENDIAN);
@@ -240,8 +241,10 @@ public class Packet {
      * @return
      */
 
-    public boolean checkIntegrity(Mote mote) {
-        return Arrays.equals(this.mic, this.computeMIC(mote));
+    public boolean checkIntegrity(Mote mote, int counter) {
+        byte[] c = this.computeMIC(mote, counter);
+        //System.out.println("MICs: " + new String(Hex.encode(this.mic)) + " " + new String(Hex.encode(c)));
+        return Arrays.equals(this.mic, c);
     }
 
 

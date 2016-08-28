@@ -1,5 +1,7 @@
 package iet.unipi.lorawan;
 
+import org.bouncycastle.util.encoders.Hex;
+
 /**
  * Created by alessio on 03/05/16.
  */
@@ -10,6 +12,7 @@ public class Util {
      * @return EUI String like AA:BB:CC:DD:EE:FF:GG:HH
      */
 
+    /*
     public static String formatEUI(byte[] eui) {
         StringBuilder sb = new StringBuilder(23);
 
@@ -20,5 +23,10 @@ public class Util {
             sb.append(String.format("%02X",eui[i]));
         }
         return sb.toString().toUpperCase();
+    }
+    */
+
+    public static String formatEUI(byte[] eui) {
+        return new String(Hex.encode(eui));
     }
 }

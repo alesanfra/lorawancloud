@@ -81,6 +81,7 @@ public class NetworkServerListener implements Runnable {
 
                 if (appEUI.length() != Constants.EUI_LENGTH) {
                     // AppEUI not valid
+                    activity.info("Invalid App EUI: " + appEUI);
                     appSocket.close();
                     continue;
                 }
@@ -89,6 +90,7 @@ public class NetworkServerListener implements Runnable {
 
                 if (socket != null && !socket.isClosed()) {
                     // Application was already registered, reject connection
+                    activity.info("Already registered app server: " + appEUI);
                     appSocket.close();
                     continue;
                 }
@@ -97,7 +99,7 @@ public class NetworkServerListener implements Runnable {
 
                 // Start Enqueuer
                 try {
-                    executor.execute(new NetworkServerEnqueuer(appEUI, appSocket,motes));
+                    executor.execute(new NetworkServerEnqueuer(appEUI, appSocket, motes));
                 } catch (IOException e) {
                     e.printStackTrace();
                     appServers.remove(appEUI);

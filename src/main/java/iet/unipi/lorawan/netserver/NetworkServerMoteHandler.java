@@ -29,7 +29,7 @@ public class NetworkServerMoteHandler implements Runnable {
 
     // Logger
     private static final Logger activity = Logger.getLogger("Network Server Mote Handler: activity");
-    private static final String ACTIVITY_FILE = "data/NS_downstream_forwarder_activity.txt";
+    private static final String ACTIVITY_FILE = "data/NS_mote_handler.txt";
 
     static {
         rx2Channel = new Channel(869.525,0,27,"LORA","SF12BW125","4/5",true);
@@ -86,7 +86,7 @@ public class NetworkServerMoteHandler implements Runnable {
 
     @Override
     public void run() {
-
+        activity.info("Start Mote Handler");
         /*** PARSE MESSAGE ***/
 
         if (message.getInt("stat") != 1) {
@@ -100,28 +100,41 @@ public class NetworkServerMoteHandler implements Runnable {
         Frame fm = new Frame(mm);
         Mote mote = motes.get(fm.getDevAddress());
 
-        // Authentication => check mic
-        if (!mm.checkIntegrity(mote)) {
-            activity.warning(fm.getDevAddress() + ": MIC NOT VALID");
+        if (mote == null) {
+            activity.warning(fm.getDevAddress() + ": Mote not found");
+            return;
         }
+
+        activity.info(fm.getDevAddress());
+
+        // Authentication => check mic
+        if (!mm.checkIntegrity(mote,fm.counter)) {
+            activity.warning(fm.getDevAddress() + ": MIC not valid");
+            return;
+        }
+
+        mote.updateStatistics(fm.counter); // Update mote statistics
 
         // Forward message to Application Server
         Socket toAS = appServers.get(mote.getAppEUI());
 
         if (toAS == null) {
             activity.warning("App server NOT found");
+        } else if (toAS.isClosed()) {
+            activity.warning("Socket closed");
+            appServers.remove(mote.getAppEUI());
         } else {
             String appserverMessage = buildAppserverMessage(gateway,message,mm.type,fm);
 
-            try(OutputStreamWriter out = new OutputStreamWriter(toAS.getOutputStream(), StandardCharsets.US_ASCII)) {
-                out.write(appserverMessage);
+            try(PrintWriter out = new PrintWriter(new OutputStreamWriter(toAS.getOutputStream(), StandardCharsets.US_ASCII))) {
+                out.println(appserverMessage);
                 out.flush();
             } catch (IOException e) {
                 e.printStackTrace();
             }
         }
 
-        mote.updateStatistics(fm.counter); // Update mote statistics
+
         activity.info(mote.printStatistics());
         /*** END PARSE MESSAGE ***/
 
@@ -271,7 +284,6 @@ public class NetworkServerMoteHandler implements Runnable {
 
             case Packet.CONFIRMED_DATA_UP:
             case Packet.UNCONFIRMED_DATA_UP: {
-                activity.warning("DATA UP not implemented yet");
                 JSONObject userdata = new JSONObject();
                 userdata.put("seqno",fm.counter);
                 userdata.put("port",fm.port);
@@ -281,7 +293,7 @@ public class NetworkServerMoteHandler implements Runnable {
                 motetx.put("freq",rxpk.getInt("freq"));
                 motetx.put("modu",rxpk.getString("modu"));
                 motetx.put("codr",rxpk.getString("codr"));
-                motetx.put("adr", fm.getAdr());
+                motetx.put("adr", fm.getADR());
 
                 userdata.put("motetx",motetx);
 
@@ -311,7 +323,10 @@ public class NetworkServerMoteHandler implements Runnable {
                 activity.warning("Unknown message type");
         }
 
-        return message.toString();
+        String msg = message.toString();
+
+        activity.info(msg);
+        return msg;
     }
 
 

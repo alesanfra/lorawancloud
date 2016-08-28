@@ -191,33 +191,15 @@ public class Frame {
         return (this.control & 0x20) >> 5;
     }
 
-    public boolean getAdr() {
-        if ((this.control & 0x80) > 0) {
-            return true;
-        }
-        else {
-            return false;
-        }
-    }
-
-
     /**
-     * Build RXParamSetupReq MAC Command: set RX1 data rate offset, set RX2 data rate, set RX2 Frequency
-     * @param RX1DRoffset Offset between uplink  and downlink data rate
-     * @param RX2DataRate RX2 data rate
-     * @param frequency RX2 center frequency expressed in hz
-     * @return byte array to be put in frame option field
+     * Returns ADR bit
+     * @return true if ADR is set, false otherwise
      */
 
-    public static byte[] getRXParamSetupReq(int RX1DRoffset, int RX2DataRate, int frequency) {
-        byte DLsettings = (byte) (((RX1DRoffset & 0x7) << 4) + (RX2DataRate & 0xF));
-        ByteBuffer bb = ByteBuffer.allocate(5).order(ByteOrder.LITTLE_ENDIAN);
-        bb.put(DLsettings);
-        bb.putInt(frequency/100);
-        byte[] req = bb.array();
-        System.out.println("RXParamSetupReq: " + Arrays.toString(req));
-        return Arrays.copyOfRange(req,0,4);
+    public boolean getADR() {
+        return ((this.control & 0x80) > 0);
     }
+
 
     /**
      * Get device address as string
@@ -228,6 +210,7 @@ public class Frame {
         byte[] dev_addr = Arrays.copyOf(devAddress,devAddress.length);
         ArrayUtils.reverse(dev_addr);
 
+        /*
         StringBuilder sb = new StringBuilder(11);
 
         for (int i=0; i<4; i++) {
@@ -237,6 +220,9 @@ public class Frame {
             sb.append(String.format("%02X",dev_addr[i]));
         }
         return sb.toString().toUpperCase();
+        */
+
+        return new String(Hex.encode(dev_addr));
     }
 
 }

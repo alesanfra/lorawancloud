@@ -7,9 +7,7 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.net.Socket;
-import java.net.SocketException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -44,9 +42,9 @@ public class NetworkServer {
         for (int i=0; i<motes.length(); i++) {
             JSONObject mote = motes.getJSONObject(i);
 
-            String appEUI = mote.getString("appeui");
-            String devEUI = mote.getString("deveui");
-            String devAddr = mote.getString("devaddr");
+            String appEUI = mote.getString("appeui").toLowerCase();
+            String devEUI = mote.getString("deveui").toLowerCase();
+            String devAddr = mote.getString("devaddr").toLowerCase();
 
             // Creo un istanza di Mote e la aggiungo alla lista di motes
             Mote newMote;

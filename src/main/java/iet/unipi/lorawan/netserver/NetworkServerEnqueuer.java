@@ -59,6 +59,11 @@ public class NetworkServerEnqueuer implements Runnable {
         try {
             while (true) {
                 String line = appServer.readLine();
+                if (line == null) {
+                    activity.info(appEui + ": socket closed");
+                    return;
+                }
+
                 String devEUI = new JSONObject(line).getJSONObject("app").getString("moteeui");
                 Mote mote = motes.getByEui(devEUI);
                 try {
