@@ -119,7 +119,7 @@ public class Packet {
         // Put frameMessage port and encrypted frameMessage payload
         if (payloadLen > 0) {
             bb.put(frame.port);
-            bb.put(frame.getEncryptedPayload(mote.appSessionKey));
+            bb.put(frame.payload);
         }
 
         // Get MAC payload

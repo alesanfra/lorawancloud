@@ -1,6 +1,7 @@
 package iet.unipi.lorawan.appserver;
 
 import iet.unipi.lorawan.Mote;
+import org.bouncycastle.util.encoders.Hex;
 import org.json.JSONObject;
 
 import javax.crypto.Cipher;
@@ -51,12 +52,13 @@ public class DownstreamMessage {
         JSONObject message = new JSONObject();
         message.put("app",app);
 
-        return app.toString().trim();
+        return message.toString().trim();
     }
 
     private String encrypt(byte[] key, String data) {
 
-        byte[] payload = Base64.getDecoder().decode(data.getBytes(StandardCharsets.US_ASCII));
+        //byte[] payload = Base64.getDecoder().decode(data.getBytes(StandardCharsets.US_ASCII));
+        byte[] payload = Hex.decode(data);
         if (payload == null || payload.length == 0) {
             return new String();
         }

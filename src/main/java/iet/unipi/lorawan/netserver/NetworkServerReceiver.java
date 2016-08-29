@@ -85,7 +85,7 @@ public class NetworkServerReceiver implements Runnable {
                                 JSONArray rxpkArray = payload.getJSONArray("rxpk");
                                 for (int i = 0; i < rxpkArray.length(); i++) {
                                     JSONObject message = rxpkArray.getJSONObject(i);
-                                    executor.execute(new NetworkServerMoteHandler(message,gateway,gw,motes,appServers));
+                                    executor.execute(new NetworkServerMoteHandler(message,gateway,gw,motes,appServers,gatewaySocket));
                                 }
                             }
                         } else {

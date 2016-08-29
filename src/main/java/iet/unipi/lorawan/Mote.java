@@ -241,6 +241,12 @@ public class Mote {
         frameCounterDown++;
     }
 
+    public void setFrameCounterDown(int counter) {
+        frameCounterDown = counter;
+    }
+
+
+
     public String printStatistics() {
         double percentage = (((double) receivedFrames) / ((double) totalFrames))*100;
         return String.format("Mote %s: %d correctly received frames over %d (%.2f%%)",getDevAddress(),receivedFrames,totalFrames,percentage);

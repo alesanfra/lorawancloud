@@ -64,6 +64,8 @@ public class NetworkServerEnqueuer implements Runnable {
                     return;
                 }
 
+                activity.info("Enqueuer: " + line);
+
                 String devEUI = new JSONObject(line).getJSONObject("app").getString("moteeui");
                 Mote mote = motes.getByEui(devEUI);
                 try {

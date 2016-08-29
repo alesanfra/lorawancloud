@@ -127,6 +127,7 @@ public class Frame {
      * @return
      */
 
+    /*
     public byte[] getEncryptedPayload(byte[] key) {
         if (this.payload == null || this.payload.length == 0) {
             return new byte[0];
@@ -170,6 +171,7 @@ public class Frame {
 
         return decrypted;
     }
+    */
 
 
     /**
@@ -178,9 +180,10 @@ public class Frame {
      * @return
      */
 
+    /*
     public byte[] getDecryptedPayload(byte[] key) {
         return this.getEncryptedPayload(key);
-    }
+    }*/
 
     /**
      * Returns ACK bit

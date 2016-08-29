@@ -68,6 +68,7 @@ public class ApplicationServerSender implements Runnable {
             while (true) {
                 DownstreamMessage message = application.messages.take();
                 socket.println(message.toJSONString());
+                socket.flush();
                 activity.info("Message sent: " + message.toJSONString());
             }
         } catch (InterruptedException e) {

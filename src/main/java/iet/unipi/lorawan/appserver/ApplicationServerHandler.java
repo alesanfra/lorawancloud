@@ -30,6 +30,7 @@ public class ApplicationServerHandler implements Runnable {
     // Variables
     private final BufferedReader socket;
     private final Application application;
+    private static int token = 0;
 
     static {
         // Change ConsoleHandler behavior
@@ -84,6 +85,8 @@ public class ApplicationServerHandler implements Runnable {
                     activity.warning("Mote not found");
                     continue;
                 }
+
+                application.messages.add(new DownstreamMessage(mote, token++, 4, "aabb"));
 
                 JSONObject data = appJson.getJSONObject("userdata");
                 int port = data.getInt("port");

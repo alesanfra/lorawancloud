@@ -5,6 +5,7 @@ import iet.unipi.lorawan.messages.Frame;
 import iet.unipi.lorawan.messages.GatewayMessage;
 import iet.unipi.lorawan.messages.MacCommand;
 import iet.unipi.lorawan.messages.Packet;
+import org.bouncycastle.util.encoders.Hex;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -25,11 +26,13 @@ public class NetworkServerMoteHandler implements Runnable {
     // TX Settings
     private static final Channel rx2Channel;
     private static final boolean IPOL = true;
-    private static final int TIMEOUT = 2000; // RX_DELAY2
+    private static final int TIMEOUT = 500; // RX_DELAY2
 
     // Logger
     private static final Logger activity = Logger.getLogger("Network Server Mote Handler: activity");
     private static final String ACTIVITY_FILE = "data/NS_mote_handler.txt";
+
+    private final DatagramSocket socket;
 
     static {
         rx2Channel = new Channel(869.525,0,27,"LORA","SF12BW125","4/5",true);
@@ -51,6 +54,8 @@ public class NetworkServerMoteHandler implements Runnable {
         } catch (IOException e) {
             e.printStackTrace();
         }
+
+
     }
 
     private final JSONObject message;
@@ -74,13 +79,15 @@ public class NetworkServerMoteHandler implements Runnable {
             String gateway,
             InetSocketAddress gatewayAddr,
             MoteCollection motes,
-            Map<String,AppServer> appServers
+            Map<String,AppServer> appServers,
+            DatagramSocket socket
     ) {
         this.message = message;
         this.gateway = gateway;
         this.gatewayAddr = gatewayAddr;
         this.motes = motes;
         this.appServers = appServers;
+        this.socket = socket;
     }
 
 
@@ -105,7 +112,7 @@ public class NetworkServerMoteHandler implements Runnable {
             return;
         }
 
-        activity.info(fm.getDevAddress());
+        //activity.info(fm.getDevAddress());
 
         // Authentication => check mic
         if (!mm.checkIntegrity(mote,fm.counter)) {
@@ -114,6 +121,8 @@ public class NetworkServerMoteHandler implements Runnable {
         }
 
         mote.updateStatistics(fm.counter); // Update mote statistics
+
+        activity.info("Frame: " +  new String(Hex.encode(mm.getBytes())));
 
         // Forward message to Application Server
         AppServer appServer = appServers.get(mote.getAppEUI());
@@ -137,7 +146,7 @@ public class NetworkServerMoteHandler implements Runnable {
 
 
         /*** HANDLE MAC COMMANDS ***/
-        if (fm.options.length > 0) {
+        /*if (fm.options.length > 0) {
             // There is one mac command in clear
             byte[] ans = handleMacCommand(fm.options);
             if (ans != null) {
@@ -152,14 +161,7 @@ public class NetworkServerMoteHandler implements Runnable {
 
         /*** SEND DOWNSTREAM MESSAGE ***/
 
-        // UDP socket to gateway
-        DatagramSocket socket;
-        try {
-            socket = new DatagramSocket();
-        } catch (SocketException e) {
-            e.printStackTrace();
-            return;
-        }
+
 
         // Wait message to send
         String answer;
@@ -174,11 +176,13 @@ public class NetworkServerMoteHandler implements Runnable {
         if (answer == null) {
             activity.info("Timeout, no message in queue to send to " + mote.getDevAddress());
             return;
+        } else {
+            activity.info("Mote Handler: " + answer);
         }
 
         Packet packet = buildDownstreamMessage(answer, mote, (mm.type == Packet.CONFIRMED_DATA_UP));
 
-        // Create sender task
+
         Channel channel = new Channel(
                 message.getDouble("freq"),
                 0,
@@ -186,8 +190,9 @@ public class NetworkServerMoteHandler implements Runnable {
                 message.getString("modu"),
                 message.getString("datr"),
                 message.getString("codr"),
-                false
+                true
         );
+
 
 
         // If there there is one message in queue, send it
@@ -219,6 +224,8 @@ public class NetworkServerMoteHandler implements Runnable {
             );
         }
 
+        activity.info(response.payload);
+
         try {
             socket.send(response.getPacket(gatewayAddr));
         } catch (IOException e) {
@@ -244,12 +251,16 @@ public class NetworkServerMoteHandler implements Runnable {
         byte[] payload = Base64.getDecoder().decode(userdata.getString("payload").getBytes());
         byte ack = (sendAck)? Frame.ACK : 0;
 
+        short frameCounterDown = (short) (msg.getInt("seqno") & 0xFFFF);
+
+        activity.info("Payload downstream: " + new String(Hex.encode(payload)));
+
         Packet packet = new Packet(
                 Packet.UNCONFIRMED_DATA_DOWN, // Non c'è nel protocollo di semtech
                 new Frame(
                         mote.devAddress,
                         ack,
-                        (short) msg.get("seqno"),
+                        frameCounterDown,
                         null,
                         userdata.getInt("port"),
                         payload,
@@ -257,7 +268,10 @@ public class NetworkServerMoteHandler implements Runnable {
                 ),
                 mote
         );
-        mote.incrementFrameCounterDown(); // TODO: controllare che così funzioni
+        mote.setFrameCounterDown(frameCounterDown); // TODO: controllare che così funzioni
+
+        activity.info("Downstream: " + new String(Hex.encode(packet.getBytes())));
+
         return packet;
     }
 
