@@ -92,7 +92,7 @@ public class NetworkServerListener implements Runnable {
 
                 // Start Enqueuer
                 try {
-                    executor.execute(new NetworkServerEnqueuer(appServer.eui, socket, motes));
+                    executor.execute(new NetworkServerAppHandler(appServer.eui, socket, motes));
                 } catch (IOException e) {
                     e.printStackTrace();
                     appServers.remove(appServer.eui);

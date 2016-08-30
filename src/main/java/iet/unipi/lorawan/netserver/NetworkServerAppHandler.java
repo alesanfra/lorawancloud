@@ -16,8 +16,8 @@ import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.util.logging.*;
 
-public class NetworkServerEnqueuer implements Runnable {
-    private static final String FILE_HEADER = "data/NS_enqueuer_";
+public class NetworkServerAppHandler implements Runnable {
+    private static final String FILE_HEADER = "data/NS_app_handler_";
 
     private final MoteCollection motes;
     private final String appEui;
@@ -34,13 +34,13 @@ public class NetworkServerEnqueuer implements Runnable {
         }
     }
 
-    public NetworkServerEnqueuer(String appEui, Socket socket, MoteCollection motes) throws IOException {
+    public NetworkServerAppHandler(String appEui, Socket socket, MoteCollection motes) throws IOException {
         this.appEui = appEui;
         this.motes = motes;
         appServer = new BufferedReader(new InputStreamReader(socket.getInputStream(), StandardCharsets.US_ASCII));
 
         // Init logger
-        this.activity = Logger.getLogger("Network Server Enqueuer: " + appEui);
+        this.activity = Logger.getLogger("Network Server App Handler: " + appEui);
         activity.setLevel(Level.INFO);
 
         try {
@@ -55,19 +55,19 @@ public class NetworkServerEnqueuer implements Runnable {
 
     @Override
     public void run() {
-        activity.info("Start NetServer Enqueuer: " + appEui);
+        activity.info("Start AppHandler: " + appEui);
         try {
             while (true) {
                 String line = appServer.readLine();
+
                 if (line == null) {
                     activity.info(appEui + ": socket closed");
                     return;
                 }
 
-                activity.info("Enqueuer: " + line);
-
                 String devEUI = new JSONObject(line).getJSONObject("app").getString("moteeui");
                 Mote mote = motes.getByEui(devEUI);
+
                 try {
                     mote.messages.put(line);
                     activity.info("Enqueued message for mote: " + devEUI);

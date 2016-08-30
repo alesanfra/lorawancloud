@@ -72,7 +72,7 @@ public class NetworkServerReceiver implements Runnable {
                 switch (gm.type) {
                     case GatewayMessage.PUSH_DATA:
                         activity.info("PUSH_DATA received from: " + packet.getAddress().getHostAddress() + ", Gateway: " + gateway);
-                        activity.info(gm.payload);
+                        //activity.info(gm.payload);
                         // Send PUSH_ACK to gateway
                         GatewayMessage pushAck = new GatewayMessage(GatewayMessage.GWMP_V1, gm.token, GatewayMessage.PUSH_ACK, null, null);
                         gatewaySocket.send(pushAck.getPacket((InetSocketAddress) packet.getSocketAddress()));

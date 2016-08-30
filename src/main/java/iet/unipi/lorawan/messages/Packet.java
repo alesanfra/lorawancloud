@@ -23,7 +23,7 @@ import java.util.logging.Logger;
  */
 
 public class Packet {
-    private static final Logger log = Logger.getLogger("MAC Message log");
+    private static final Logger log = Logger.getLogger("Packet");
 
     // LoRaWAN message types
     public static final int JOIN_REQUEST = 0;
@@ -91,9 +91,9 @@ public class Packet {
 
     /**
      * Build a MAC message from scratch
-     * @param type
-     * @param frame
-     * @param mote
+     * @param type LoRaWAN type
+     * @param frame Frame data structure
+     * @param mote End device
      */
 
     public Packet(int type, Frame frame, Mote mote) {
@@ -135,7 +135,7 @@ public class Packet {
         }
 
         if (direction == -1) {
-            System.err.println("MAC messsage type not recognized, dir set to 1 (DOWNSTREAM)");
+            log.warning("MAC messsage type not recognized, dir set to 1 (DOWNSTREAM)");
             this.dir = DOWNSTREAM;
         } else {
             this.dir = direction;
@@ -179,9 +179,6 @@ public class Packet {
      */
 
     private byte[] computeMIC(Mote mote, int frameCounter) {
-        //int frameCounter = (this.dir == UPSTREAM) ? mote.getFrameCounterUp() : mote.getFrameCounterDown();
-        //System.out.println("MIC direction: " + this.dir + " , counter: " + frameCounter);
-
         ByteBuffer bb = ByteBuffer.allocate(B0_LEN + 1 + this.payload.length).order(ByteOrder.LITTLE_ENDIAN);
 
         // Build B0 and put in byte buffer
@@ -211,7 +208,7 @@ public class Packet {
 
 
     /**
-     *
+     * Compute Message Integrity Code (MIC) for Join Accept messages
      * @param appKey
      * @return
      */
@@ -271,7 +268,7 @@ public class Packet {
      * @return
      */
 
-    public byte[] getEncryptedJoinAccept(byte[] key) {
+    /*public byte[] getEncryptedJoinAccept(byte[] key) {
         byte[] toEncrypt = ArrayUtils.addAll(this.payload,this.mic);
         byte[] encrypted = new byte[0];
 
@@ -290,5 +287,5 @@ public class Packet {
         byte mac_header = (byte) ((this.type << 5) + this.version);
         byte[] res = ArrayUtils.add(encrypted,0,mac_header);
         return res;
-    }
+    }*/
 }
