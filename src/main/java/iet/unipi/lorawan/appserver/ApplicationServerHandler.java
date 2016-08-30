@@ -1,5 +1,6 @@
 package iet.unipi.lorawan.appserver;
 
+import iet.unipi.lorawan.Constants;
 import iet.unipi.lorawan.Mote;
 import iet.unipi.lorawan.SimpleDateFormatter;
 import org.bouncycastle.util.encoders.Hex;
@@ -22,57 +23,30 @@ import java.util.logging.*;
 
 public class ApplicationServerHandler implements Runnable {
     private static final byte UPSTREAM_DIRECTION = 0;
-    private static final String FILE_HEADER = "data/AS_";
-
-    // Logger
-    private final Logger activity;
 
     // Variables
     private final BufferedReader socket;
     private final Application application;
     private static int token = 0;
 
-    static {
-        // Change ConsoleHandler behavior
-        for (Handler handler: Logger.getLogger("").getHandlers()) {
-            if (handler instanceof ConsoleHandler) {
-                handler.setFormatter(new SimpleDateFormatter());
-            }
-        }
-    }
-
-
     public ApplicationServerHandler(Application application, Socket socket) throws IOException {
         this.application = application;
         this.socket = new BufferedReader(new InputStreamReader(socket.getInputStream(), StandardCharsets.US_ASCII));
-        String appEui = new String(Hex.encode(application.eui));
-
-        // Init logger
-        this.activity = Logger.getLogger("Application Server: " + appEui);
-        activity.setLevel(Level.INFO);
-
-        try {
-            FileHandler activityFile = new FileHandler(FILE_HEADER + appEui + ".txt", true);
-            activityFile.setFormatter(new SimpleDateFormatter());
-            activity.addHandler(activityFile);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
     }
 
 
     @Override
     public void run() {
-        activity.info("Start AppServer Receiver: " + application.name + ", eui: " + new String(Hex.encode(application.eui)));
+        application.log.info("Start AppServer Receiver: " + application.name + ", eui: " + new String(Hex.encode(application.eui)));
 
         while (true) {
             try {
                 String message = socket.readLine();
-                activity.info("Messaggio: " + message);
-
                 if(message == null) {
                     return;
                 }
+
+                application.log.info("Messaggio: " + message);
 
                 JSONObject m = new JSONObject(message);
                 JSONObject appJson = m.getJSONObject("app");
@@ -82,7 +56,7 @@ public class ApplicationServerHandler implements Runnable {
                 Mote mote = application.motes.get(moteEui);
 
                 if (mote == null) {
-                    activity.warning("Mote not found");
+                    application.log.warning("Mote not found");
                     continue;
                 }
 
@@ -91,10 +65,10 @@ public class ApplicationServerHandler implements Runnable {
                 JSONObject data = appJson.getJSONObject("userdata");
                 int port = data.getInt("port");
                 int seqno = data.getInt("seqno");
-                activity.info(String.format("Received message from %s, port %d, counter %d",mote.getDevEUI(),port,seqno));
+                application.log.info(String.format("Received message from %s, port %d, counter %d",mote.getDevEUI(),port,seqno));
 
                 byte[] payload = decryptPayload(data.getString("payload"), mote, seqno);
-                activity.info(String.format("Payload (%d bytes): %s", payload.length, new String(Hex.encode(payload))));
+                application.log.info(String.format("Payload (%d bytes): %s", payload.length, new String(Hex.encode(payload))));
 
             } catch (SocketException e) {
                 if (e.getMessage().equals("Connection reset")){

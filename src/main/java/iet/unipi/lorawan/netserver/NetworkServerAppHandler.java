@@ -1,6 +1,7 @@
 package iet.unipi.lorawan.netserver;
 
 
+import iet.unipi.lorawan.Constants;
 import iet.unipi.lorawan.Mote;
 import iet.unipi.lorawan.MoteCollection;
 import iet.unipi.lorawan.SimpleDateFormatter;
@@ -17,22 +18,12 @@ import java.nio.charset.StandardCharsets;
 import java.util.logging.*;
 
 public class NetworkServerAppHandler implements Runnable {
-    private static final String FILE_HEADER = "data/NS_app_handler_";
+    private static final String FILE_HEADER = Constants.NETSERVER_LOG_PATH + "NS_app_handler_";
 
     private final MoteCollection motes;
     private final String appEui;
     private BufferedReader appServer;
-
     private final Logger activity;
-
-    static {
-        // Change ConsoleHandler behavior
-        for (Handler handler: Logger.getLogger("").getHandlers()) {
-            if (handler instanceof ConsoleHandler) {
-                handler.setFormatter(new SimpleDateFormatter());
-            }
-        }
-    }
 
     public NetworkServerAppHandler(String appEui, Socket socket, MoteCollection motes) throws IOException {
         this.appEui = appEui;
@@ -49,6 +40,13 @@ public class NetworkServerAppHandler implements Runnable {
             activity.addHandler(activityFile);
         } catch (IOException e) {
             e.printStackTrace();
+        }
+
+        // Change ConsoleHandler behavior
+        for (Handler handler: Logger.getLogger("").getHandlers()) {
+            if (handler instanceof ConsoleHandler) {
+                handler.setFormatter(new SimpleDateFormatter());
+            }
         }
     }
 

@@ -3,6 +3,7 @@ package iet.unipi.lorawan.netserver;
 
 import iet.unipi.lorawan.*;
 import iet.unipi.lorawan.messages.GatewayMessage;
+import org.bouncycastle.util.encoders.Hex;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -17,8 +18,8 @@ public class NetworkServerReceiver implements Runnable {
     private static final int BUFFER_LEN = 2400;
 
     // Logger
-    private static final Logger activity = Logger.getLogger("Network Server Receiver: activity");
-    private static final String ACTIVITY_FILE = "data/NS_receiver_activity.txt";
+    private static final Logger activity = Logger.getLogger("Network Server Receiver");
+    private static final String ACTIVITY_FILE = Constants.NETSERVER_LOG_PATH + "NS_receiver_activity.txt";
 
     // Data Structures
     private final Map<String,InetSocketAddress> gateways;
@@ -67,7 +68,7 @@ public class NetworkServerReceiver implements Runnable {
                 DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
                 gatewaySocket.receive(packet); // Receive UDP packet
                 GatewayMessage gm = new GatewayMessage(packet.getData()); // Create GWMP data structure
-                String gateway = Util.formatEUI(gm.gateway);
+                String gateway = new String(Hex.encode(gm.gateway));
 
                 switch (gm.type) {
                     case GatewayMessage.PUSH_DATA:
@@ -106,11 +107,11 @@ public class NetworkServerReceiver implements Runnable {
                         break;
 
                     case GatewayMessage.TX_ACK:
-                        activity.info("TX_ACK received from: " + packet.getAddress().getHostAddress() + ", Gateway: " + Util.formatEUI(gm.gateway));
+                        activity.info("TX_ACK received from: " + packet.getAddress().getHostAddress() + ", Gateway: " + gateway);
                         break;
 
                     default:
-                        activity.warning("Unknown GWMP message type received from: " + packet.getAddress().getHostAddress() + ", Gateway: " + Util.formatEUI(gm.gateway));
+                        activity.warning("Unknown GWMP message type received from: " + packet.getAddress().getHostAddress() + ", Gateway: " + gateway);
                 }
             } catch (IOException e) {
                 e.printStackTrace();

@@ -1,5 +1,6 @@
 package iet.unipi.lorawan.messages;
 
+import iet.unipi.lorawan.Constants;
 import iet.unipi.lorawan.Mote;
 import org.apache.commons.lang.ArrayUtils;
 import org.bouncycastle.crypto.engines.AESEngine;
@@ -33,6 +34,7 @@ public class Packet {
     public static final int CONFIRMED_DATA_UP = 4;
     public static final int CONFIRMED_DATA_DOWN = 5;
     public static final int RELAY_UNCONFIRMED_DATA_UP = 6; // LoRaWAN relay mode
+    public static final int INVALID_TYPE = -1;
 
     // Direction
     private static final byte UPSTREAM = 0;
@@ -63,7 +65,7 @@ public class Packet {
 
         if (data.length < MIN_LORAWAN_PAYLOAD) {
             log.warning("NOT LoRaWAN message");
-            this.type = UNCONFIRMED_DATA_UP;
+            this.type = INVALID_TYPE;
             this.version = LORAWAN_1;
             this.payload = new byte[0];
             this.mic = new byte[4];
@@ -82,6 +84,8 @@ public class Packet {
             this.dir = UPSTREAM;
         } else if (this.type == CONFIRMED_DATA_DOWN || this.type == UNCONFIRMED_DATA_DOWN || this.type == JOIN_ACCEPT) {
             this.dir = DOWNSTREAM;
+        } else if (this.type == INVALID_TYPE) {
+            this.dir = -1;
         } else {
             log.warning("MAC messsage type not recognized, dir set to 0 (UPSTREAM)");
             this.dir = UPSTREAM;
@@ -155,7 +159,7 @@ public class Packet {
         int channels_len = joinAccept.getChannels().length;
 
 
-        ByteBuffer bb = ByteBuffer.allocate(JoinAccept.JOIN_ACCEPT_LENGTH + channels_len).order(ByteOrder.LITTLE_ENDIAN);
+        ByteBuffer bb = ByteBuffer.allocate(Constants.JOIN_ACCEPT_LENGTH + channels_len).order(ByteOrder.LITTLE_ENDIAN);
         bb.put(joinAccept.appNonce);
         bb.put(joinAccept.netID);
         bb.put(joinAccept.devAddress);

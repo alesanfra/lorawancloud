@@ -214,14 +214,11 @@ public class Mote {
             firstFrame = false;
             totalFrames++;
             receivedFrames++;
-        } else if (frameCounterUp + 1 == counter) {
+        } else if (frameCounterUp > counter) {
             totalFrames++;
             receivedFrames++;
         } else if (frameCounterUp < counter) {
             totalFrames += counter - frameCounterUp;
-            receivedFrames++;
-        } else if (frameCounterUp > counter) {
-            totalFrames++;
             receivedFrames++;
         }
 

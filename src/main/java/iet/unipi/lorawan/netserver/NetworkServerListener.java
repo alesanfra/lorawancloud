@@ -30,10 +30,22 @@ public class NetworkServerListener implements Runnable {
     private ExecutorService executor = Executors.newCachedThreadPool();
 
     //Logger
-    private static final String FILE_LOGGER = "data/NS_listener.txt";
-    private final Logger activity;
+    private static final String FILE_LOGGER = Constants.NETSERVER_LOG_PATH + "NS_listener.txt";
+    private static final Logger activity = Logger.getLogger("Network Server Listener");
 
     static {
+        // Init logger
+        activity.setLevel(Level.INFO);
+
+        try {
+            FileHandler activityFile = new FileHandler(FILE_LOGGER);
+            activityFile.setFormatter(new SimpleDateFormatter());
+            activity.addHandler(activityFile);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+
         // Change ConsoleHandler behavior
         for (Handler handler: Logger.getLogger("").getHandlers()) {
             if (handler instanceof ConsoleHandler) {
@@ -47,17 +59,7 @@ public class NetworkServerListener implements Runnable {
         this.appServers = appServers;
         this.listener = new ServerSocket(port);
 
-        // Init logger
-        this.activity = Logger.getLogger("Network Server Listener");
-        activity.setLevel(Level.INFO);
 
-        try {
-            FileHandler activityFile = new FileHandler(FILE_LOGGER);
-            activityFile.setFormatter(new SimpleDateFormatter());
-            activity.addHandler(activityFile);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
     }
 
     @Override
@@ -80,7 +82,7 @@ public class NetworkServerListener implements Runnable {
                 AppServer appServer = new AppServer(message.getJSONObject("appserver"));
 
 
-                if (appServer.eui.length() != Constants.EUI_LENGTH) {
+                if (appServer.eui.length() != Constants.EUI_HEX_LENGTH) {
                     // AppEUI not valid
                     activity.info("Invalid App EUI: " + appServer.eui);
                     socket.close();

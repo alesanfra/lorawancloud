@@ -1,7 +1,6 @@
 package iet.unipi.lorawan.messages;
 
 import iet.unipi.lorawan.Constants;
-import org.bouncycastle.util.encoders.Hex;
 
 import java.security.SecureRandom;
 
@@ -10,11 +9,6 @@ import java.security.SecureRandom;
  */
 
 public class JoinAccept {
-    public static final int JOIN_ACCEPT_LENGTH = 12;
-    public static final int MAX_CHANNELS = 16;
-
-    public static final byte[] NET_ID = Hex.decode("000000");
-
     public final byte[] appNonce = new byte[3];
     public final byte[] netID;
     public final byte[] devAddress;
@@ -31,7 +25,7 @@ public class JoinAccept {
     public JoinAccept(byte[] devAddress) {
         SecureRandom random = new SecureRandom();
         random.nextBytes(this.appNonce);
-        this.netID = NET_ID;
+        this.netID = Constants.NET_ID;
         this.devAddress = devAddress;
         this.DLsettings = 0; // Offset = 0, RX2 DR = 0
         this.RxDelay = (byte) (Constants.RECEIVE_DELAY1 / 1000000);

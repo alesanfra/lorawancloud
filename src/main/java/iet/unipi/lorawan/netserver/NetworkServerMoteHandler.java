@@ -29,8 +29,8 @@ public class NetworkServerMoteHandler implements Runnable {
     private static final int TIMEOUT = 700; // RX_DELAY2
 
     // Logger
-    private static final Logger activity = Logger.getLogger("Network Server Mote Handler: activity");
-    private static final String ACTIVITY_FILE = "data/NS_mote_handler.txt";
+    private static final Logger activity = Logger.getLogger("Network Server Mote Handler");
+    private static final String ACTIVITY_FILE = Constants.NETSERVER_LOG_PATH + "NS_mote_handler.txt";
 
     static {
         rx2Channel = new Channel(869.525,0,27,"LORA","SF12BW125","4/5",true);
@@ -236,6 +236,7 @@ public class NetworkServerMoteHandler implements Runnable {
 
         try {
             socket.send(response.getPacket(gatewayAddr));
+            activity.info("Sent message to mote: " + mote.getDevAddress());
         } catch (IOException e) {
             e.printStackTrace();
         }

@@ -5,12 +5,6 @@
       "name":"Experiments",
       "addr":"localhost",
       "port":55001
-    },
-    {
-      "eui":"1DEE000012345678",
-      "name":"Logger",
-      "addr":"localhost",
-      "port":55002
     }
   ]
 }
