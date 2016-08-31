@@ -13,7 +13,7 @@ public class Experiment {
 
 
     private final String address;
-    private final int received[][][][] = new int[256][6][6][2];
+    private final int received[][][][] = new int[256][6][14][2];
     private int[] last = new int[4];
 
     private static final Logger log = Logger.getLogger("Experiment");
@@ -46,7 +46,7 @@ public class Experiment {
 
 
     public synchronized void add(int testN, int dataRate, int power, int length) {
-        int[] current = {testN, dataRate, power, length};
+        int[] current = new int[]{testN, dataRate, power, length};
 
         if (!Arrays.equals(last,current)) {
             print(last);
@@ -83,7 +83,7 @@ public class Experiment {
 
 
     private static class Configuration {
-        private static final String[] powers = {"14 dBm","11 dBm","8 dBm","5 dBm","2 dBm"};
+        //private static final String[] powers = {"14 dBm","11 dBm","8 dBm","5 dBm","2 dBm"};
         private static final String[] lengths = {"10 byte","50 byte"};
 
         public final int testN;
@@ -94,7 +94,8 @@ public class Experiment {
         public Configuration(int[] conf) {
             this.testN = conf[0];
             this.dr = String.format("SF%dBW125",12-conf[1]);
-            this.pw = powers[conf[2]];
+            //this.pw = powers[conf[2]];
+            this.pw = String.format("%d dBm",conf[2]);
             this.len = lengths[conf[3]];
         }
     }

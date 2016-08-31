@@ -41,7 +41,7 @@ public class Mote {
     public final BlockingQueue<byte[]> commands = new LinkedBlockingQueue<>();
     public final BlockingQueue<BoundDevice> devices = new LinkedBlockingQueue<>();
 
-    public final Experiment experiment = new Experiment(this.getDevAddress());
+    public final Experiment experiment;
 
 
     /**
@@ -63,6 +63,7 @@ public class Mote {
         this.appSessionKey = appSessionKey;
         this.frameCounterUp = -1;
         this.frameCounterDown = 0;
+        this. experiment = new Experiment(this.getDevAddress());
     }
 
 
@@ -95,6 +96,8 @@ public class Mote {
 
         this.frameCounterUp = 0;
         this.frameCounterDown = 0;
+
+        this. experiment = new Experiment(this.getDevAddress());
     }
 
 

@@ -106,11 +106,12 @@ public class ApplicationServerHandler implements Runnable {
         }
 
         ByteBuffer bb = ByteBuffer.wrap(payload).order(ByteOrder.LITTLE_ENDIAN);
-        int iteration = bb.getInt();
+
         byte testN = bb.get();
         byte dataRate = bb.get();
         byte power = bb.get();
-        byte index = bb.get();
+        byte repetition = bb.get();
+        int iteration = bb.getInt();
 
         mote.experiment.add(testN,dataRate, power, length);
     }
