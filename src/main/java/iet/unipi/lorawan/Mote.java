@@ -1,5 +1,6 @@
 package iet.unipi.lorawan;
 
+import iet.unipi.lorawan.experiments.Experiment;
 import iet.unipi.lorawan.netserver.BoundDevice;
 import org.apache.commons.lang.ArrayUtils;
 import org.bouncycastle.util.encoders.Hex;
@@ -12,6 +13,7 @@ import java.security.Key;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.LinkedBlockingQueue;
 
 
@@ -38,6 +40,8 @@ public class Mote {
     public final BlockingQueue<String> messages = new LinkedBlockingQueue<>();
     public final BlockingQueue<byte[]> commands = new LinkedBlockingQueue<>();
     public final BlockingQueue<BoundDevice> devices = new LinkedBlockingQueue<>();
+
+    public final Experiment experiment = new Experiment(this.getDevAddress());
 
 
     /**

@@ -1,8 +1,7 @@
 package iet.unipi.lorawan.appserver;
 
-import iet.unipi.lorawan.Constants;
 import iet.unipi.lorawan.Mote;
-import iet.unipi.lorawan.SimpleDateFormatter;
+import iet.unipi.lorawan.experiments.Experiment;
 import org.bouncycastle.util.encoders.Hex;
 import org.json.JSONObject;
 
@@ -18,7 +17,6 @@ import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
 import java.security.Key;
 import java.util.Base64;
-import java.util.logging.*;
 
 
 public class ApplicationServerHandler implements Runnable {
@@ -70,6 +68,9 @@ public class ApplicationServerHandler implements Runnable {
                 byte[] payload = decryptPayload(data.getString("payload"), mote, seqno);
                 application.log.info(String.format("Payload (%d bytes): %s", payload.length, new String(Hex.encode(payload))));
 
+                // Analyze
+                updateStitistics(mote, payload);
+
             } catch (SocketException e) {
                 if (e.getMessage().equals("Connection reset")){
                     e.printStackTrace();
@@ -80,6 +81,38 @@ public class ApplicationServerHandler implements Runnable {
                 e.printStackTrace();
             }
         }
+    }
+
+
+    /**
+     * Experiment only
+     * @param mote device
+     * @param payload message payload
+     */
+
+    private void updateStitistics(Mote mote, byte[] payload) {
+        // Parse payload
+        if (payload.length < 10) {
+            application.log.warning("INVALID payload: length < 10 bytes");
+            return;
+        }
+
+        int length = 0;
+        if (payload.length == 50) {
+            length = 1;
+        } else if (payload.length != 10) {
+            application.log.warning("INVALID payload: length not equal to 10 bytes or 50 bytes");
+            return;
+        }
+
+        ByteBuffer bb = ByteBuffer.wrap(payload).order(ByteOrder.LITTLE_ENDIAN);
+        int iteration = bb.getInt();
+        byte testN = bb.get();
+        byte dataRate = bb.get();
+        byte power = bb.get();
+        byte index = bb.get();
+
+        mote.experiment.add(testN,dataRate, power, length);
     }
 
 

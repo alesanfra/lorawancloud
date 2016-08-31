@@ -19,7 +19,9 @@ public class NetworkServerReceiver implements Runnable {
 
     // Logger
     private static final Logger activity = Logger.getLogger("Network Server Receiver");
+    private static final Logger receivedMessages = Logger.getLogger("Received Messages");
     private static final String ACTIVITY_FILE = Constants.NETSERVER_LOG_PATH + "NS_receiver_activity.txt";
+    private static final String RECEIVED_FILE = Constants.NETSERVER_LOG_PATH + "Received_messages.txt";
 
     // Data Structures
     private final Map<String,InetSocketAddress> gateways;
@@ -39,6 +41,16 @@ public class NetworkServerReceiver implements Runnable {
             FileHandler activityFile = new FileHandler(ACTIVITY_FILE, true);
             activityFile.setFormatter(new SimpleDateFormatter());
             activity.addHandler(activityFile);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        // Init logger
+        receivedMessages.setLevel(Level.INFO);
+        try {
+            FileHandler receivedFile = new FileHandler(RECEIVED_FILE, true);
+            receivedFile.setFormatter(new SimpleDateFormatter());
+            receivedMessages.addHandler(receivedFile);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -73,7 +85,8 @@ public class NetworkServerReceiver implements Runnable {
                 switch (gm.type) {
                     case GatewayMessage.PUSH_DATA:
                         activity.info("PUSH_DATA received from: " + packet.getAddress().getHostAddress() + ", Gateway: " + gateway);
-                        //activity.info(gm.payload);
+                        receivedMessages.info(gm.payload);
+
                         // Send PUSH_ACK to gateway
                         GatewayMessage pushAck = new GatewayMessage(GatewayMessage.GWMP_V1, gm.token, GatewayMessage.PUSH_ACK, null, null);
                         gatewaySocket.send(pushAck.getPacket((InetSocketAddress) packet.getSocketAddress()));
