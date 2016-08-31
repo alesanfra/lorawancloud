@@ -10,10 +10,14 @@ import java.util.logging.*;
 
 public class Experiment {
     public static final int REPETIONS = 100;
+    private static final int MAX_TESTN = 256;
+    private static final int MAX_DATA_RATES = 6;
+    private static final int MAX_TX_POWERS = 14;
+    private static final int MAX_LENGTHS = 2;
 
 
     private final String address;
-    private final int received[][][][] = new int[256][6][14][2];
+    private final int received[][][][] = new int[MAX_TESTN][MAX_DATA_RATES][MAX_TX_POWERS][MAX_LENGTHS];
     private int[] last = new int[4];
 
     private static final Logger log = Logger.getLogger("Experiment");
@@ -74,11 +78,8 @@ public class Experiment {
 
         Configuration conf = new Configuration(params);
 
-        StringBuilder sb = new StringBuilder(300);
-        sb.append(String.format("\n\tEnd experiment %d of mote %s\n", conf.testN, address));
-        sb.append(String.format("\tLength: %s\t\t  Data rate: %s\t  Trasmission power: %s\n", conf.len, conf.dr, conf.pw));
-        sb.append(String.format("\tReceived packets: %d\t  PER: %f %%\n", packets, per));
-        log.info(sb.toString());
+        String sb = String.format("\n\tEnd experiment %d of mote %s\n\tLength: %s\t\t  Data rate: %s\t  Trasmission power: %s\n\tReceived packets: %d\t  PER: %f %%\n", conf.testN, address, conf.len, conf.dr, conf.pw, packets, per);
+        log.info(sb);
     }
 
 
