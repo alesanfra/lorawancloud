@@ -1,0 +1,1 @@
+This folder will contain al log files from network servers
