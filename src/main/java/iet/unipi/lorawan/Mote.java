@@ -46,12 +46,6 @@ public class Mote {
 
     /**
      * Standard constructor
-     * @param devEUI
-     * @param appEUI
-     * @param devAddress
-     * @param appKey
-     * @param netSessionKey
-     * @param appSessionKey
      */
 
     public Mote(byte[] devEUI, byte[] appEUI, byte[] devAddress, byte[] appKey, byte[] netSessionKey, byte[] appSessionKey) {
@@ -69,12 +63,6 @@ public class Mote {
 
     /**
      * Parse string values and call standard contructor
-     * @param devEUI
-     * @param appEUI
-     * @param devAddress
-     * @param appKey
-     * @param netSessionKey
-     * @param appSessionKey
      */
 
     public Mote(String devEUI, String appEUI, String devAddress, String appKey, String netSessionKey, String appSessionKey) {
@@ -103,23 +91,12 @@ public class Mote {
 
     /**
      * Convenience constructor
-     * @param devEUI
-     * @param devAddress
      */
 
     public Mote(byte[] devEUI, byte[] devAddress) {
         this(devEUI,null,devAddress,null,null,null);
     }
 
-
-    /**
-     *
-     * @param flag
-     * @param appNonce
-     * @param netID
-     * @param devNonce
-     * @return
-     */
 
     private byte[] getSessionKey(byte flag, byte[] appNonce, byte[] netID, byte[] devNonce) {
         ByteBuffer bb = ByteBuffer.allocate(16).order(ByteOrder.LITTLE_ENDIAN);
@@ -149,13 +126,6 @@ public class Mote {
     }
 
 
-    /**
-     *
-     * @param devNonce
-     * @param appNonce
-     * @param netID
-     */
-
     public void createSessionKeys(byte[] devNonce, byte[] appNonce, byte[] netID) {
         this.netSessionKey = getSessionKey((byte) 0x01, appNonce, netID, devNonce);
         this.appSessionKey = getSessionKey((byte) 0x02, appNonce, netID, devNonce);
@@ -164,20 +134,19 @@ public class Mote {
 
     /**
      * Get dev eui as string
-     * @return
+     * @return device eui
      */
 
     public String getDevEUI() {
         byte[] dev_eui = Arrays.copyOf(this.devEUI,this.devEUI.length);
         ArrayUtils.reverse(dev_eui);
         return new String(Hex.encode(dev_eui));
-        //return Util.formatEUI(dev_eui);
     }
 
 
     /**
      * Get App eui as string
-     * @return
+     * @return application eui
      */
 
     public String getAppEUI() {
@@ -190,7 +159,7 @@ public class Mote {
 
     /**
      * Get device address as string
-     * @return
+     * @return device address
      */
 
     public String getDevAddress() {

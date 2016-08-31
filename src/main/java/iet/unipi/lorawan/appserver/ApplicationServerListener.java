@@ -17,10 +17,6 @@ public class ApplicationServerListener implements Runnable {
     public ApplicationServerListener(Application application) throws IOException {
         this.application = application;
         listener = new ServerSocket(application.port);
-
-
-
-
     }
 
     @Override

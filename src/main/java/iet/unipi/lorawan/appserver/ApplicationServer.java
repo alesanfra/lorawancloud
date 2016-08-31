@@ -17,7 +17,7 @@ import java.util.concurrent.Executors;
 
 public class ApplicationServer {
 
-    private static final int MAX_THREADS = 50;
+    private static final int MAX_THREADS = 10;
 
 
     /**
@@ -112,39 +112,14 @@ public class ApplicationServer {
     }
 
 
-    /*
-    private static void testAS(Map<String, Application> apps) {
-        for (Map.Entry<String, Application> entry: apps.entrySet()) {
-            Application app = entry.getValue();
-
-            System.out.println("Applicazione: " + app.name);
-            System.out.println("App EUI: " + Util.formatEUI(app.eui));
-
-            for (Map.Entry<String, Mote> entry1: app.motes.entrySet()) {
-                System.out.println(entry1.getValue().getDevAddress());
-            }
-        }
-    }
-    */
-
-
 
     public static void main(String[] args) {
         ExecutorService executor = Executors.newFixedThreadPool(MAX_THREADS);
         Map<String, Application> apps = loadAppsAndMotes(Constants.APPS_CONF,Constants.MOTES_CONF);
 
-        /**
-         * Per ogni applicazione
-         * a. creare un socket TCP verso il NS
-         * b. I threads sender e receiver
-         */
-
+        // For each application create sender and listener threads
         for (Application app: apps.values()) {
             try {
-                //Socket socket = new Socket(Constants.NETSERVER_ADDRESS, Constants.NETSERVER_LISTENING_PORT);
-                //app.socket = socket;
-                //app.sender = new ApplicationServerSender(app);
-                //app.receiver = new ApplicationServerHandler(app);
                 executor.execute(new ApplicationServerSender(app));
                 executor.execute(new ApplicationServerListener(app));
             } catch (IOException e) {

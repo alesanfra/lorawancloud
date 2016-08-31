@@ -17,10 +17,6 @@ public class ApplicationServerSender implements Runnable {
     private final Application application;
     private final PrintWriter socket;
 
-    static {
-
-    }
-
     public ApplicationServerSender(Application application) throws IOException {
         this.application = application;
         Socket socket = new Socket(Constants.NETSERVER_ADDRESS, Constants.NETSERVER_LISTENING_PORT);
