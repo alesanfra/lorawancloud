@@ -12,13 +12,13 @@ public class Experiment {
     public static final int REPETIONS = 100;
     private static final int MAX_TESTN = 256;
     private static final int MAX_DATA_RATES = 6;
-    private static final int MAX_TX_POWERS = 14;
+    private static final int MAX_TX_POWERS = 15;
     private static final int MAX_LENGTHS = 2;
 
 
     private final String address;
     private final int received[][][][] = new int[MAX_TESTN][MAX_DATA_RATES][MAX_TX_POWERS][MAX_LENGTHS];
-    private int[] last = new int[4];
+    private int[] last;
 
     private static final Logger log = Logger.getLogger("Experiment");
     private static final String ACTIVITY_FILE = Constants.APPSERVER_LOG_PATH + "experiments.txt";
@@ -52,7 +52,7 @@ public class Experiment {
     public synchronized void add(int testN, int dataRate, int power, int length) {
         int[] current = new int[]{testN, dataRate, power, length};
 
-        if (!Arrays.equals(last,current)) {
+        if (last != null && !Arrays.equals(last,current)) {
             print(last);
         }
 
@@ -78,26 +78,7 @@ public class Experiment {
 
         Configuration conf = new Configuration(params);
 
-        String sb = String.format("\n\tEnd experiment %d of mote %s\n\tLength: %s\t\t  Data rate: %s\t  Trasmission power: %s\n\tReceived packets: %d\t  PER: %f %%\n", conf.testN, address, conf.len, conf.dr, conf.pw, packets, per);
+        String sb = String.format("\n\tEnd configuration, mote %s\n\tLength: %s\t\t  Data rate: %s\t  Trasmission power: %s\n\tReceived packets: %d\t  PER: %f %%\n", address, conf.len, conf.dr, conf.pw, packets, per);
         log.info(sb);
-    }
-
-
-    private static class Configuration {
-        //private static final String[] powers = {"14 dBm","11 dBm","8 dBm","5 dBm","2 dBm"};
-        private static final String[] lengths = {"10 byte","50 byte"};
-
-        public final int testN;
-        public final String dr;
-        public final String pw;
-        public final String len;
-
-        public Configuration(int[] conf) {
-            this.testN = conf[0];
-            this.dr = String.format("SF%dBW125",12-conf[1]);
-            //this.pw = powers[conf[2]];
-            this.pw = String.format("%d dBm",conf[2]);
-            this.len = lengths[conf[3]];
-        }
     }
 }

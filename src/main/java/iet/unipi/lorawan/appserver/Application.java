@@ -17,7 +17,7 @@ public class Application {
     private static final String FILE_HEADER = Constants.APPSERVER_LOG_PATH + "AS_handler_";
 
     // Properties
-    public final byte[] eui;
+    public final String eui;
     public final String name;
     public final String address;
     public final int port;
@@ -30,7 +30,7 @@ public class Application {
     public Application(String eui, String name, String address, int port) {
         this.address = address;
         this.port = port;
-        this.eui = Hex.decode(eui);
+        this.eui = eui;
         this.name = name;
         this.motes = new ConcurrentHashMap<>();
 

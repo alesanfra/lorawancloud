@@ -26,10 +26,9 @@ public class ApplicationServerSender implements Runnable {
     @Override
     public void run() {
         // Send app eui to netserver
-        String appeui = new String(Hex.encode(application.eui));
-        application.log.info("Start AppServer Sender: " + application.name + ", eui: " + appeui);
+        application.log.info("Start AppServer Sender: " + application.name + ", eui: " + application.eui);
         JSONObject appServer = new JSONObject();
-        appServer.put("appeui",appeui);
+        appServer.put("appeui",application.eui);
         appServer.put("addr",application.address);
         appServer.put("port",application.port);
         JSONObject hello = new JSONObject();
@@ -43,7 +42,7 @@ public class ApplicationServerSender implements Runnable {
                 DownstreamMessage message = application.messages.take();
                 socket.println(message.toJSONString());
                 socket.flush();
-                application.log.info("Message sent: " + message.toJSONString());
+                //application.log.info("Message sent: " + message.toJSONString());
             }
         } catch (InterruptedException e) {
             e.printStackTrace();

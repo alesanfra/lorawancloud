@@ -21,6 +21,7 @@ public class ApplicationServerListener implements Runnable {
 
     @Override
     public void run() {
+        application.log.info("Start AppServer Listener: " + application.name + ", eui: " + application.eui);
         while (true) {
             try {
                 // Accept new Application Server

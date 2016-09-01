@@ -49,7 +49,7 @@ public class NetworkServerReceiver implements Runnable {
         receivedMessages.setLevel(Level.INFO);
         try {
             FileHandler receivedFile = new FileHandler(RECEIVED_FILE, true);
-            receivedFile.setFormatter(new SimpleDateFormatter());
+            receivedFile.setFormatter(new LogFormatter());
             receivedMessages.addHandler(receivedFile);
         } catch (IOException e) {
             e.printStackTrace();

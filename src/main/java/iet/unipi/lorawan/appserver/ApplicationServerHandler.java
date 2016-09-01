@@ -1,6 +1,7 @@
 package iet.unipi.lorawan.appserver;
 
 import iet.unipi.lorawan.Mote;
+import iet.unipi.lorawan.experiments.Configuration;
 import iet.unipi.lorawan.experiments.Experiment;
 import org.bouncycastle.util.encoders.Hex;
 import org.json.JSONObject;
@@ -35,7 +36,7 @@ public class ApplicationServerHandler implements Runnable {
 
     @Override
     public void run() {
-        application.log.info("Start AppServer Receiver: " + application.name + ", eui: " + new String(Hex.encode(application.eui)));
+        //application.log.info("Start AppServer Receiver: " + application.name + ", eui: " + new String(Hex.encode(application.eui)));
 
         while (true) {
             try {
@@ -44,7 +45,7 @@ public class ApplicationServerHandler implements Runnable {
                     return;
                 }
 
-                application.log.info("Messaggio: " + message);
+                //application.log.info("Messaggio: " + message);
 
                 JSONObject m = new JSONObject(message);
                 JSONObject appJson = m.getJSONObject("app");
@@ -63,10 +64,9 @@ public class ApplicationServerHandler implements Runnable {
                 JSONObject data = appJson.getJSONObject("userdata");
                 int port = data.getInt("port");
                 int seqno = data.getInt("seqno");
-                application.log.info(String.format("Received message from %s, port %d, counter %d",mote.getDevEUI(),port,seqno));
-
                 byte[] payload = decryptPayload(data.getString("payload"), mote, seqno);
-                application.log.info(String.format("Payload (%d bytes): %s", payload.length, new String(Hex.encode(payload))));
+                application.log.info(String.format("Received message from %s, port %d, counter %d",mote.getDevEUI(),port,seqno));
+                //application.log.info(String.format("Payload (%d bytes): %s",payload.length, new String(Hex.encode(payload))));
 
                 // Analyze
                 updateStitistics(mote, payload);
@@ -113,7 +113,11 @@ public class ApplicationServerHandler implements Runnable {
         byte repetition = bb.get();
         int iteration = bb.getInt();
 
+
+        Configuration c = new Configuration(testN,dataRate,power,length);
+        application.log.info(String.format("Payload -->\t  Length: %s\t  Data rate: %s\t  TX power: %s\t  Repetition: %d",c.len,c.dr,c.pw,repetition));
         mote.experiment.add(testN,dataRate, power, length);
+
     }
 
 
