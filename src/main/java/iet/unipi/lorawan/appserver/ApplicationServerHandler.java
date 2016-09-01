@@ -59,11 +59,19 @@ public class ApplicationServerHandler implements Runnable {
                     continue;
                 }
 
-                application.messages.add(new DownstreamMessage(mote, token++, 4, "aabb"));
+
+
+
 
                 JSONObject data = appJson.getJSONObject("userdata");
                 int port = data.getInt("port");
                 int seqno = data.getInt("seqno");
+
+                byte[] ack = ByteBuffer.allocate(2).putShort((short) (seqno & 0xFFFF)).array();
+
+                application.messages.add(new DownstreamMessage(mote, token++, 4, new String(Hex.encode(ack))));
+
+
                 byte[] payload = decryptPayload(data.getString("payload"), mote, seqno);
                 application.log.info(String.format("Received message from %s, port %d, counter %d",mote.getDevEUI(),port,seqno));
                 //application.log.info(String.format("Payload (%d bytes): %s",payload.length, new String(Hex.encode(payload))));
