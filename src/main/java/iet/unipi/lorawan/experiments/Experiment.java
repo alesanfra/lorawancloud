@@ -78,7 +78,7 @@ public class Experiment {
 
         Configuration conf = new Configuration(params);
 
-        String sb = String.format("\n\tEnd configuration, mote %s\n\tLength: %s\t\t  Data rate: %s\t  Trasmission power: %s\n\tReceived packets: %d\t  PER: %f %%\n", address, conf.len, conf.dr, conf.pw, packets, per);
+        String sb = String.format("\n\tEnd configuration\tMote %s\tExperiment %d\n\tLength: %s\t\t  Data rate: %s\t  Trasmission power: %s\n\tReceived packets: %d\t  PER: %f %%\n", address, conf.testN, conf.len, conf.dr, conf.pw, packets, per);
         log.info(sb);
     }
 }
