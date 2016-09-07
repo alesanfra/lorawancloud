@@ -1,8 +1,11 @@
 package iet.unipi.lorawan.appserver;
 
+import iet.unipi.lorawan.Constants;
+import iet.unipi.lorawan.LogFormatter;
 import iet.unipi.lorawan.Mote;
+import iet.unipi.lorawan.SimpleDateFormatter;
 import iet.unipi.lorawan.experiments.Configuration;
-import iet.unipi.lorawan.experiments.Experiment;
+import iet.unipi.lorawan.netserver.Channel;
 import org.bouncycastle.util.encoders.Hex;
 import org.json.JSONObject;
 
@@ -18,10 +21,34 @@ import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
 import java.security.Key;
 import java.util.Base64;
+import java.util.logging.*;
 
 
 public class ApplicationServerHandler implements Runnable {
     private static final byte UPSTREAM_DIRECTION = 0;
+
+    // Logger
+    private static final Logger messages = Logger.getLogger("Decrypted Messages");
+    private static final String MESSAGES_FILE = Constants.APPSERVER_LOG_PATH + "decrypted_messages.txt";
+
+    static {
+        // Init logger
+        messages.setLevel(Level.INFO);
+        try {
+            FileHandler messagesFile = new FileHandler(MESSAGES_FILE, true);
+            messagesFile.setFormatter(new LogFormatter());
+            messages.addHandler(messagesFile);
+
+            // Change ConsoleHandler behavior
+            for (Handler handler : Logger.getLogger("").getHandlers()) {
+                if (handler instanceof ConsoleHandler) {
+                    handler.setFormatter(new SimpleDateFormatter());
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 
     // Variables
     private final BufferedReader socket;
@@ -60,9 +87,6 @@ public class ApplicationServerHandler implements Runnable {
                 }
 
 
-
-
-
                 JSONObject data = appJson.getJSONObject("userdata");
                 int port = data.getInt("port");
                 int seqno = data.getInt("seqno");
@@ -74,7 +98,7 @@ public class ApplicationServerHandler implements Runnable {
 
                 byte[] payload = decryptPayload(data.getString("payload"), mote, seqno);
                 application.log.info(String.format("Received message from %s, port %d, counter %d",mote.getDevEUI(),port,seqno));
-                //application.log.info(String.format("Payload (%d bytes): %s",payload.length, new String(Hex.encode(payload))));
+                messages.info(new String(Hex.encode(payload)));
 
                 // Analyze
                 updateStitistics(mote, payload);

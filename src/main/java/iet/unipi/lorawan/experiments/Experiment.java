@@ -2,6 +2,7 @@ package iet.unipi.lorawan.experiments;
 
 
 import iet.unipi.lorawan.Constants;
+import iet.unipi.lorawan.LogFormatter;
 import iet.unipi.lorawan.SimpleDateFormatter;
 
 import java.io.IOException;
@@ -20,18 +21,17 @@ public class Experiment {
     private final int received[][][][] = new int[MAX_TESTN][MAX_DATA_RATES][MAX_TX_POWERS][MAX_LENGTHS];
     private int[] last;
 
-    private static final Logger log = Logger.getLogger("Experiment");
-    private static final String ACTIVITY_FILE = Constants.APPSERVER_LOG_PATH + "experiments.txt";
+    private static final Logger log = Logger.getLogger("Experiments");
+    private static final String LOG_FILE = Constants.APPSERVER_LOG_PATH + "experiments.txt";
 
     static {
 
         // Init logger
         log.setLevel(Level.INFO);
-        FileHandler activityFile;
         try {
-            activityFile = new FileHandler(ACTIVITY_FILE, true);
-            activityFile.setFormatter(new SimpleDateFormatter());
-            log.addHandler(activityFile);
+            FileHandler logFile = new FileHandler(LOG_FILE, true);
+            logFile.setFormatter(new SimpleDateFormatter());
+            log.addHandler(logFile);
 
             // Change ConsoleHandler behavior
             for (Handler handler : Logger.getLogger("").getHandlers()) {
