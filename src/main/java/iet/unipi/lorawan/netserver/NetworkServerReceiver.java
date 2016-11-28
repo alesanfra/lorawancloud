@@ -20,8 +20,10 @@ public class NetworkServerReceiver implements Runnable {
     // Logger
     private static final Logger activity = Logger.getLogger("Network Server Receiver");
     private static final Logger receivedMessages = Logger.getLogger("Received Messages");
+
     private static final String ACTIVITY_FILE = Constants.NETSERVER_LOG_PATH + "NS_receiver_activity.txt";
     private static final String RECEIVED_FILE = Constants.NETSERVER_LOG_PATH + "Received_messages.txt";
+
 
     // Data Structures
     private final Map<String,InetSocketAddress> gateways;
@@ -32,6 +34,8 @@ public class NetworkServerReceiver implements Runnable {
 
 
     private byte[] buffer = new byte[BUFFER_LEN];
+
+
 
 
     static {
@@ -54,6 +58,8 @@ public class NetworkServerReceiver implements Runnable {
         } catch (IOException e) {
             e.printStackTrace();
         }
+
+
 
         // Change ConsoleHandler behavior
         for (Handler handler: Logger.getLogger("").getHandlers()) {

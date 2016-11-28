@@ -32,6 +32,9 @@ public class NetworkServerMoteHandler implements Runnable {
     private static final Logger activity = Logger.getLogger("Network Server Mote Handler");
     private static final String ACTIVITY_FILE = Constants.NETSERVER_LOG_PATH + "NS_mote_handler.txt";
 
+    private static final Logger meshMessages = Logger.getLogger("Mesh Messages");
+    private static final String MESH_FILE = Constants.NETSERVER_LOG_PATH + "Mesh_messages.txt";
+
     static {
         rx2Channel = new Channel(869.525,0,27,"LORA","SF12BW125","4/5",true);
 
@@ -42,15 +45,25 @@ public class NetworkServerMoteHandler implements Runnable {
             activityFile = new FileHandler(ACTIVITY_FILE, true);
             activityFile.setFormatter(new SimpleDateFormatter());
             activity.addHandler(activityFile);
-
-            // Change ConsoleHandler behavior
-            for (Handler handler : Logger.getLogger("").getHandlers()) {
-                if (handler instanceof ConsoleHandler) {
-                    handler.setFormatter(new SimpleDateFormatter());
-                }
-            }
         } catch (IOException e) {
             e.printStackTrace();
+        }
+
+        // Init logger
+        meshMessages.setLevel(Level.INFO);
+        try {
+            FileHandler meshFile = new FileHandler(MESH_FILE, true);
+            meshFile.setFormatter(new LogFormatter());
+            meshMessages.addHandler(meshFile);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        // Change ConsoleHandler behavior
+        for (Handler handler : Logger.getLogger("").getHandlers()) {
+            if (handler instanceof ConsoleHandler) {
+                handler.setFormatter(new SimpleDateFormatter());
+            }
         }
     }
 
@@ -105,7 +118,8 @@ public class NetworkServerMoteHandler implements Runnable {
                 handleMessage(packet);
                 break;
             case Packet.RELAY_UNCONFIRMED_DATA_UP:
-                activity.info("Relayed message, skip packet");
+                activity.info("Relayed message");
+                meshMessages.info(message.toString());
                 break;
             default:
                 activity.warning("Message type not recognized");
