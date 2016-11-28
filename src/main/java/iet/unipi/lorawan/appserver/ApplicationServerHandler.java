@@ -77,7 +77,6 @@ public class ApplicationServerHandler implements Runnable {
                 JSONObject m = new JSONObject(message);
                 JSONObject appJson = m.getJSONObject("app");
 
-
                 String moteEui = appJson.getString("moteeui");
                 Mote mote = application.motes.get(moteEui);
 
@@ -85,6 +84,10 @@ public class ApplicationServerHandler implements Runnable {
                     application.log.warning("Mote not found");
                     continue;
                 }
+
+                JSONObject gwrx = appJson.getJSONArray("gwrx").getJSONObject(0);
+                int rssi = gwrx.getInt("rssi");
+                int lsnr = gwrx.getInt("lsnr");
 
 
                 JSONObject data = appJson.getJSONObject("userdata");
@@ -98,7 +101,7 @@ public class ApplicationServerHandler implements Runnable {
 
                 byte[] payload = decryptPayload(data.getString("payload"), mote, seqno);
                 application.log.info(String.format("Received message from %s, port %d, counter %d",mote.getDevEUI(),port,seqno));
-                messages.info(new String(Hex.encode(payload)));
+                messages.info(String.format("%s,%s,%d,%d",new String(Hex.encode(payload)), moteEui, rssi, lsnr));
 
                 // Analyze
                 updateStitistics(mote, payload);
