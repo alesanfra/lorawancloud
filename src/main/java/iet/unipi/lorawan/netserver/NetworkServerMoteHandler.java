@@ -334,7 +334,7 @@ public class NetworkServerMoteHandler implements Runnable {
                 gwrx.put("chan",rxpk.getInt("chan"));
                 gwrx.put("rfch",rxpk.getInt("rfch"));
                 gwrx.put("rssi",rxpk.getInt("rssi"));
-                gwrx.put("lsnr",rxpk.getInt("lsnr"));
+                gwrx.put("lsnr",rxpk.getDouble("lsnr"));
 
                 JSONArray gwrxArray = new JSONArray();
                 gwrxArray.put(gwrx);

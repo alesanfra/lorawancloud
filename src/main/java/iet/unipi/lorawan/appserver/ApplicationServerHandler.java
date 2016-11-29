@@ -87,7 +87,7 @@ public class ApplicationServerHandler implements Runnable {
 
                 JSONObject gwrx = appJson.getJSONArray("gwrx").getJSONObject(0);
                 int rssi = gwrx.getInt("rssi");
-                int lsnr = gwrx.getInt("lsnr");
+                double lsnr = gwrx.getDouble("lsnr");
 
 
                 JSONObject data = appJson.getJSONObject("userdata");
@@ -101,7 +101,7 @@ public class ApplicationServerHandler implements Runnable {
 
                 byte[] payload = decryptPayload(data.getString("payload"), mote, seqno);
                 application.log.info(String.format("Received message from %s, port %d, counter %d",mote.getDevEUI(),port,seqno));
-                messages.info(String.format("%s,%s,%d,%d",new String(Hex.encode(payload)), moteEui, rssi, lsnr));
+                messages.info(String.format("%s,%s,%d,%f",new String(Hex.encode(payload)), moteEui, rssi, lsnr));
 
                 // Analyze
                 updateStitistics(mote, payload);
