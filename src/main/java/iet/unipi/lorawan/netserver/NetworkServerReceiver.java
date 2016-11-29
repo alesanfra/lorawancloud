@@ -9,6 +9,7 @@ import org.json.JSONObject;
 
 import java.io.IOException;
 import java.net.*;
+import java.util.Arrays;
 import java.util.Map;
 import java.util.concurrent.*;
 import java.util.logging.*;
@@ -34,9 +35,6 @@ public class NetworkServerReceiver implements Runnable {
 
 
     private byte[] buffer = new byte[BUFFER_LEN];
-
-
-
 
     static {
         // Init logger
@@ -83,6 +81,7 @@ public class NetworkServerReceiver implements Runnable {
     public void run() {
         while (true) {
             try {
+                Arrays.fill(buffer,(byte) 0);
                 DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
                 gatewaySocket.receive(packet); // Receive UDP packet
                 GatewayMessage gm = new GatewayMessage(packet.getData()); // Create GWMP data structure
