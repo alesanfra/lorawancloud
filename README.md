@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.com/alesanfra/lorawancloud.svg?branch=master)](https://travis-ci.com/alesanfra/lorawancloud)
+
 # LoraCloud - a LoRaWAN network server
 
 LoraCloud is simple LoRaWAN network server written from scratch for my master thesis.
